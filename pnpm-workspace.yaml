@@ -1,0 +1,18 @@
+allowBuilds:
+  # Native binding resolver for eslint-plugin-import (dev-only, via
+  # eslint-config-next). Its postinstall is 5 lines calling napi-postinstall to
+  # pick the correct platform binary. Inspected and approved.
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@next/env@16.3.8'
+  - '@next/eslint-plugin-next@16.3.8'
+  - '@next/swc-darwin-arm64@16.3.8'
+  - '@next/swc-darwin-x64@16.3.8'
+  - '@next/swc-linux-arm64-gnu@16.3.8'
+  - '@next/swc-linux-arm64-musl@16.3.8'
+  - '@next/swc-linux-x64-gnu@16.3.8'
+  - '@next/swc-linux-x64-musl@16.3.8'
+  - '@next/swc-win32-arm64-msvc@16.3.8'
+  - '@next/swc-win32-x64-msvc@16.3.8'
+  - eslint-config-next@16.3.8
+  - next@16.3.8
