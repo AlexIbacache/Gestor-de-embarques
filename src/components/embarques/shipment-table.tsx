@@ -118,14 +118,14 @@ export function ShipmentTable({
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Embarques ({totalCount})</p>
 
-      {/* Desktop: a real table. Nine columns do not fit the layout below `lg`, so
-          the `Table` gets a `min-w` and its own wrapper scrolls horizontally
-          rather than stretching or breaking the grid. */}
-      <div className="hidden lg:block">
+      {/* Desktop: a real table. Nine columns need the width `xl` gives them —
+          below it the sidebar leaves too little room and the table would
+          scroll horizontally inside its own card. */}
+      <div className="hidden xl:block">
         <Card className="py-0">
           <CardContent className="px-0">
             <div className="overflow-x-auto">
-              <Table className="min-w-[1100px]">
+              <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Referencia</TableHead>
@@ -202,10 +202,10 @@ export function ShipmentTable({
         </Card>
       </div>
 
-      {/* Mobile: same fields, stacked, no table semantics — a nine-column table
-          would either overflow or need the horizontal scroll the layout
+      {/* Below `xl`: same fields, stacked, no table semantics — a nine-column
+          table would either overflow or need the horizontal scroll the layout
           forbids. */}
-      <div className="space-y-3 lg:hidden">
+      <div className="space-y-3 xl:hidden">
         {shipments.map((shipment, index) => (
           <FadeIn
             key={shipment.id}

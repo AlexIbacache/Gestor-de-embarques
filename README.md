@@ -85,6 +85,50 @@ El usuario de Auth del paso 2 es obligatorio y no tiene alternativa: no hay fluj
 
 `schema.sql` y `seed.sql` son **idempotentes**. `schema.sql` usa `create table if not exists` y `drop policy if exists`; `seed.sql` borra primero lo que él mismo sembró (`reference like 'EMB-%'` y `email like '%@seed.logistica.test'`) antes de insertar, así que se puede volver a correr sin duplicar nada.
 
+## Modelo de datos
+
+Dos tablas y una relación. Todo el esquema está en `supabase/schema.sql`, que se ejecuta entero y es idempotente.
+
+```
+clients ──1:N──> shipments
+```
+
+### `clients`
+
+| Columna | Tipo | Restricciones | Nota |
+| --- | --- | --- | --- |
+| `id` | `uuid` | PK, `default gen_random_uuid()` | Generado por la base, nunca por la app |
+| `name` | `text` | `not null` | |
+| `email` | `text` | `not null` | Validado como email por Zod, no por la base |
+| `company` | `text` | `not null` | |
+| `created_at` | `timestamptz` | `default now()` | No editable; sobrevive a un update |
+
+Índices: `name`, `company`, `created_at desc` — los tres son rutas de ordenamiento o búsqueda del listado.
+
+### `shipments`
+
+| Columna | Tipo | Restricciones | Nota |
+| --- | --- | --- | --- |
+| `id` | `uuid` | PK, `default gen_random_uuid()` | |
+| `reference` | `text` | `not null` **`unique`** | Unicidad → código `23505` mapeado a un mensaje propio |
+| `client_id` | `uuid` | `not null`, FK → `clients (id)` | `ON DELETE NO ACTION` (default explícito) |
+| `origin` | `text` | `not null` | |
+| `destination` | `text` | `not null` | |
+| `modality` | `text` | `not null` | `FCL`, `LCL`, `AIR` — dominio de la app, ver más abajo |
+| `status` | `text` | `not null` | `Pendiente`, `En tránsito`, `Entregado`, `Retrasado`, `Cancelado` |
+| `eta` | `date` | `not null` | Viaja como `yyyy-mm-dd` en ambas direcciones |
+| `created_at` | `timestamptz` | `default now()` | |
+
+Índices: `client_id`, `status`, `modality`, `eta`, `created_at desc` — FK, los dos filtros de listado y los dos ordenamientos.
+
+### Tres decisiones del modelo
+
+**`NOT NULL` en toda columna de negocio.** Las Server Actions ya validan con Zod, pero la base no debe depender de esa validación: son dos capas que fallan de forma distinta y una no sustituye a la otra.
+
+**`id` y `created_at` se excluyen explícitamente de todo insert y update.** No vienen en el payload que la app construye (`insert({ name, email, company })`), así que un cliente malicioso no puede elegir su propio UUID ni su fecha de alta aunque manipule el `FormData`.
+
+**`modality` y `status` son `text`, no `enum` ni `CHECK`.** Es la inconsistencia más visible del esquema, y está anotada en la sección de qué mejoraría para producción: el dominio de valores vive en `src/lib/validations/shipment.ts` y en las allowlists de la capa de consulta, no en la base.
+
 ## Decisiones de arquitectura
 
 ### Server Components y Server Actions
@@ -101,11 +145,20 @@ Las páginas son Server Components y leen los datos directamente. Los únicos ar
 
 La presencia de una cookie de auth no se usa como señal de "sesión iniciada" a propósito: `@supabase/ssr` solo llama `setAll` cuando hay un refresh real, así que un request con una sesión todavía válida no escribe ninguna cookie. Quien necesita saber quién está conectado usa `updateSessionWithUser`.
 
-### RLS permisiva
+### RLS: permisiva en permisos, restrictiva en capacidades
 
-Las políticas son `auth.uid() is not null` para select, insert, update y delete sobre ambas tablas: cualquier usuario autenticado puede leer y escribir todo.
+Las políticas son `auth.uid() is not null` para las operaciones que la aplicación ofrece, y **no hay política de borrado sobre `clients`**. Esa asimetría es intencional:
 
-Es una **decisión deliberada de alcance, no una omisión**. No hay multi-tenancy en este proyecto: un gestor de embarques es un usuario operativo, no un inquilino, y agregar una columna `organization_id` más políticas por organization para un producto de un solo cliente sería complejidad sin requisito.
+| Tabla | select | insert | update | delete |
+| --- | --- | --- | --- | --- |
+| `clients` | ✅ | ✅ | ✅ | **❌ sin política** |
+| `shipments` | ✅ | ✅ | ✅ | ✅ |
+
+**La ausencia de la política de delete es el control**, no un descuido. El enunciado pide borrar *embarques*; clientes son crear, leer y editar. Un botón deshabilitado es un hecho de UI, no una garantía de seguridad: quien evaluator no respeta el flujo de la interfaz puede llamar al endpoint REST de Supabase directamente con un JWT válido. Sin política de delete, PostgREST responde `42501` a cualquier llamada directa autenticada, así que la base de datos —y no el frontend— es la que cierra la puerta.
+
+`shipments.client_id` referencia `clients (id)` con `ON DELETE NO ACTION`, así que un borrado en cascada nunca podría eliminar los embarques de un cliente en silencio. Esa constraint es la **segunda** capa: no sustituye a la policy y solo dispara para clientes que ya tienen embarques.
+
+Ser permisivo en el resto **es una decisión deliberada de alcance, no una omisión**. No hay multi-tenancy en este proyecto: un gestor de embarques es un usuario operativo, no un inquilino, y agregar una columna `organization_id` más políticas por organization para un producto de un solo cliente sería complejidad sin requisito.
 
 Lo que cambiaría en un producto multi-tenant: una columna `owner_id` u `organization_id` en cada tabla, políticas `using (organization_id = (select auth.jwt() -> 'app_metadata' ->> 'org_id')::uuid)` —con `select` sobre la función para que la expresión sea estable en RLS—, un `org_id` en el JWT y actualización del token al cambiar de organización. El resto de la arquitectura no se toca: la verificación en las Server Actions pasa a comprobar pertenencia, y el middleware sigue igual.
 
@@ -144,7 +197,7 @@ El **mensaje** de Supabase nunca se muestra: está en inglés y puede nombrar in
 
 ### Borrados de cero filas son fallos
 
-`.delete().eq("id", id)` sin selección devuelve `data: null` y ningún error: un borrado que no	matcheó nada es indistinguible de uno exitoso. Por eso las actions agregan `.select("id")` — la respuesta es el array de filas realmente eliminadas— y tratan `length === 0` como error. Devolver `success: true` ahí le diría a la interfaz que se eliminó un embarque que sigue existiendo.
+`.delete().eq("id", id)` sin selección devuelve `data: null` y ningún error: un borrado que no coincidió con nada es indistinguible de uno exitoso. Por eso las actions agregan `.select("id")` — la respuesta es el array de filas realmente eliminadas— y tratan `length === 0` como error. Devolver `success: true` ahí le diría a la interfaz que se eliminó un embarque que sigue existiendo.
 
 ### El estado del listado vive en la URL
 
@@ -158,11 +211,56 @@ Un `?status=` desconocido es la misma consulta que ningún filtro, porque "todos
 
 Las fechas del seed se calculan con `current_date` y `make_interval`, no como literales. Con fechas absolutas el dataset envejece: en unos meses los 40 embarques figuran vencidos y el filtro por estado deja de reflejar una operación real.
 
+## Seguridad
+
+Decisiones de seguridad dispersas en las secciones anteriores, con la referencia de dónde vive cada una:
+
+| Decisión | Dónde | Qué evita |
+| --- | --- | --- |
+| Sesión verificada en servidor | Cada Server Action | Que un JWT manipulado alcance una mutación |
+| Sin policy de delete en `clients` | `supabase/schema.sql` | Borrado de clientes fuera del flujo de la UI |
+| Allowlists en todo query param | `SORTABLE_COLUMNS`, `SHIPMENT_STATUSES`, `SHIPMENT_MODALITIES` | Inyección de SQL vía `?sort=`, `?status=` |
+| `formatSearchTerm` | `src/lib/utils.ts` | Escapar del valor en el `.or()` de PostgREST |
+| Errores por código, no por mensaje | `src/app/actions/embarques.ts` | Filtrar nombres de constraints y de policies RLS |
+| Columnas escribibles explícitas | `.insert({ name, email, company })` | Mass assignment de `id` / `created_at` |
+| UUID validado antes de consultar | `embarques/[id]/page.tsx` | Round-trips a consultas que no pueden matchear |
+| `.select("id")` en el delete | `deleteShipmentAction` | Reportar éxito sobre un borrado de cero filas |
+| Credenciales fuera del repo | `.gitignore` (`.env*` + `!.env.local.example`) | Versionar `.env.local` |
+
+**Lo que no hay todavía:** una CSP o cabeceras de seguridad en `next.config.ts`. Para una app en producción sería la primera línea a agregar.
+
+## Qué mejoraría si esto fuera a producción
+
+Ordenado por lo que más duele primero. Esto no es una lista de deseos: es el ranking de lo que rompería antes o peor.
+
+**1. Pruebas automatizadas — no hay ninguna.** Es la carencia más grande y la más difícil de recuperar tarde, porque sin tests cualquier refactor es un salto al vacío. El orden en que las escribiría:
+
+- *Unit* para lo puro y sin DOM: `formatSearchTerm`, `formatDate` / `formatDateTime`, los parsers de query params y `resolveSortColumn`. Son funciones de un archivo, sin dependencias, y cubren la capa donde vive la sanitización.
+- *Integración* para las 7 Server Actions, con la sesión real o un stub de `createClient`. Es donde está el 90% de la superficie de ataque.
+- *E2E* de los cinco recorridos que el enunciado nombra: login, alta de cliente, alta de embarque, edición, borrado.
+- Visual regression sobre los estados de carga, porque un skeleton desalineado es exactamente el tipo de regresión que nadie detecta a tiempo.
+
+**2. Restricción del dominio en la base.** `status` y `modality` son `text` libre. `src/lib/validations/shipment.ts` y las allowlists los acotan, pero el esquema declara en su propio encabezado que "la base de datos no debe depender de esa validación" — y acá depende. Un `create type shipment_status as enum (...)` más `alter column status type shipment_status using status::shipment_status` cierra el dominio donde debe estar, y el `CHECK` de `reference` por formato sería lo mismo para el otro lado.
+
+**3. Concurrencia optimista.** Los updates filtran solo por `id` (`.eq("id", target.data.id)`), así que son *last-write-wins*: dos pestañas abiertas sobre el mismo embarque se pisan en silencio y el usuario que escribió segundo no se entera de que perdió el primer cambio. No hay `updated_at` en ninguna tabla, así que hoy no hay ni siquiera con qué detectarlo. Lo sumaría como columna y lo usaría como predicado del `.update()`, devolviendo `PGRST116` como "otro usuario modificó esto".
+
+**4. Sin trazabilidad.** Los borrados son físicos y no hay `updated_at`. En una operación logística, "quién borró qué embarque y cuándo" es un requisito, no un lujo. Soft delete (`deleted_at` + filtro) más una tabla de auditoría es lo que pediría el negocio.
+
+**5. Límite de 200 clientes en el formulario de embarque.** `CLIENT_LIMIT = 200` acota el `Select` de clientes que se le ofrece al usuario. Hoy, con 15 clientes, es invisible. Pasado ese número, el usuario no puede elegir a un cliente que existe y **no hay ningún aviso**: el dropdown simplemente no lo lista. Con búsqueda asíncrona contra la base (un `ClientCombobox` que consulta al escribir) desaparece el techo sin agregar paginación a un `Select` nativo.
+
+**6. Aggregate queries del dashboard.** Cuatro consultas separadas para los contadores, lanzadas en paralelo. A la escala de este dataset son lo correcto y más simples que una alternativa. Con volumen las cuatro se volverían el cuello de botella, y la respuesta es una consulta agrupada o un cache de corto plazo, no reescribir la página.
+
+**7. Historial de migraciones.** `schema.sql` es un script aplastado e idempotente, correcto para partir de cero. En producción haría falta un directorio `supabase/migrations/` para que cada cambio sea versionado y reversible de forma independiente.
+
+**8. Observabilidad y entrega continua.** Sin logging estructurado, sin reporte de errores, y sin CI. Como mínimo: un pipeline que corra `pnpm build`, `pnpm lint` y `pnpm exec tsc --noEmit` en cada push, más captura de errores en las Server Actions. Hoy un error en producción se descubre mirando el `console` del navegador de un usuario.
+
+**Lo que NO cambiaría:** la estructura de rutas, la separación Server/Client Components, el estado del listado en la URL, ni el `PGRST116` como detección de fila desaparecida. Esa base aguantaría bien el crecimiento; lo anterior es lo que se suffre antes.
+
 ## Notas y trampas conocidas
 
 - **`pnpm build` emite un warning de deprecación**: la convención de archivo `middleware` está deprecada en favor de `proxy` en Next 16. Es esperado y no rompe nada; el warning viene del propio `next` al detectar `src/middleware.ts`. Si se migra, `next` incluye el codemod, pero conviene hacerlo en un commit propio porque renombra el archivo.
 - **No** hay flujo de signup. El usuario de Auth se crea desde el Dashboard; sin él, `/login` no tiene contra qué validarse.
-- **No** se puede eliminar un cliente que tenga embarques: `shipments.client_id` usa `ON DELETE NO ACTION`, así que la FK bloquea el borrado en vez de hacer cascada silenciosa.
+- **No** se puede eliminar un cliente, por dos razones independientes. La política de borrado **no existe** sobre `public.clients`, así que PostgREST responde `42501` a cualquier llamada directa autenticada. Y aunque existiera, `shipments.client_id` usa `ON DELETE NO ACTION`: la FK bloquearía en vez de hacer cascada silenciosa sobre los embarques del cliente. El botón de la tabla está deshabilitado por una tercera razón más —no hay `deleteClientAction`—, pero esa es la que menos importa, porque un control de UI no es una garantía.
 - **`"Cargando..."` está prohibido por la convención de UI del proyecto**: los estados de carga son skeletons, no texto.
 
 ## Estructura del proyecto

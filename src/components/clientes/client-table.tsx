@@ -117,8 +117,9 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">Clientes ({totalCount})</p>
 
-      {/* Desktop: a real table. */}
-      <div className="hidden md:block">
+      {/* Desktop: a real table. Six columns need the width `lg` gives them —
+          below it the sidebar leaves too little room and every cell truncates. */}
+      <div className="hidden lg:block">
         <Card className="py-0">
           <CardContent className="px-0">
             <Table>
@@ -195,10 +196,10 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
         </Card>
       </div>
 
-      {/* Mobile: same fields, stacked, no table semantics — a 5-column table
-          would either overflow or need the horizontal scroll the layout
+      {/* Below `lg`: same fields, stacked, no table semantics — a six-column
+          table would either overflow or need the horizontal scroll the layout
           forbids. */}
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-3 lg:hidden">
         {clients.map((client, index) => (
           <FadeIn
             key={client.id}

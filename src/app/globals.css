@@ -129,6 +129,19 @@
 }
 
 /*
+ * Recharts focus outline.
+ *
+ * Clicking a chart segment (e.g. a donut slice) focuses the underlying SVG
+ * path, and the browser paints a default focus ring around it. That ring is a
+ * rectangle that does not follow the shape, so it reads as a rendering bug.
+ * The charts are not interactive — there is no click handler and nothing to
+ * focus — so the outline is removed at the source.
+ */
+.recharts-wrapper :focus {
+  outline: none;
+}
+
+/*
  * Global reduced-motion guard.
  *
  * The JS animations in `src/components/ui/motion.tsx` already collapse to

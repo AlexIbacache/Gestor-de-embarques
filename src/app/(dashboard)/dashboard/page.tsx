@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { AlertCircle, Clock, Package, Truck } from "lucide-react";
 
+import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { ShipmentStatusBadge } from "@/components/embarques/shipment-status-badge";
 import {
@@ -57,6 +58,9 @@ async function DashboardContent() {
     { count: inTransit, error: inTransitError },
     { count: delayed, error: delayedError },
     { data: recent, error: recentError },
+    { data: statusData, error: statusError },
+    { data: modalityData, error: modalityError },
+    { data: timelineData, error: timelineError },
   ] = await Promise.all([
     supabase.from("shipments").select("*", { count: "exact", head: true }),
     supabase
@@ -72,10 +76,20 @@ async function DashboardContent() {
       .select("*, client:clients(id, name, company, email)")
       .order("created_at", { ascending: false })
       .limit(RECENT_SHIPMENT_LIMIT),
+    supabase.from("shipments").select("status"),
+    supabase.from("shipments").select("modality"),
+    supabase.from("shipments").select("created_at"),
   ]);
 
   const firstError =
-    totalError ?? inTransitError ?? delayedError ?? recentError ?? null;
+    totalError ??
+    inTransitError ??
+    delayedError ??
+    recentError ??
+    statusError ??
+    modalityError ??
+    timelineError ??
+    null;
 
   if (firstError) {
     return (
@@ -110,6 +124,12 @@ async function DashboardContent() {
         <StatCard label="En tránsito" value={inTransit ?? 0} icon={Truck} />
         <StatCard label="Retrasados" value={delayed ?? 0} icon={Clock} />
       </div>
+
+      <DashboardCharts
+        statusData={(statusData ?? []) as { status: string }[]}
+        modalityData={(modalityData ?? []) as { modality: string }[]}
+        timelineData={(timelineData ?? []) as { created_at: string }[]}
+      />
 
       <Card>
         <CardHeader>
@@ -191,6 +211,12 @@ function DashboardSkeleton() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[0, 1, 2].map((index) => (
           <Skeleton key={index} className="h-[85px] rounded-xl" />
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[0, 1, 2].map((index) => (
+          <Skeleton key={index} className="h-[280px] rounded-xl" />
         ))}
       </div>
 
