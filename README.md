@@ -2,6 +2,16 @@
 
 Gestor de embarques logísticos con autenticación y CRUD completo de clientes y embarques, construido sobre Next.js App Router y Supabase (Postgres + Auth + RLS). Los listados filtrables, ordenables y paginados se resuelven en el servidor; la base de datos es la última línea de defensa, no la primera.
 
+## Despliegue de prueba (Vercel)
+
+| Dato | Valor |
+| --- | --- |
+| **URL** | https://gestor-de-embarques.vercel.app/login |
+| **Usuario** | `admin@test.com` |
+| **Contraseña** | `admintest` |
+
+> Este usuario está pre-creado en el proyecto de Supabase del despliegue. Permite probar la autenticación, el dashboard, CRUD de clientes y embarques, filtros, ordenamiento y paginación sin configurar nada localmente.
+
 ## Stack
 
 | Pieza | Versión | Rol |
