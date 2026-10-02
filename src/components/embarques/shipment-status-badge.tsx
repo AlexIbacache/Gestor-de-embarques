@@ -3,10 +3,11 @@ import type { ShipmentStatus } from "@/types/database";
 
 /**
  * Single source of truth for shipment status colours, per the project UI
- * convention: `Pendiente` amber, `En tránsito` blue, `Entregado` emerald,
- * `Retrasado` red, `Cancelado` gray. Exported so the shipments table, the
- * shipment form select and the detail view all render the same colours instead
- * of duplicating class strings per component.
+ * convention (updated to semantic palette): `Pendiente` slate/neutral,
+ * `En tránsito` amber/warning, `Entregado` lime/success, `Retrasado` red/danger,
+ * `Cancelado` gray/muted. Exported so the shipments table, the shipment form
+ * select and the detail view all render the same colours instead of duplicating
+ * class strings per component.
  *
  * `Record<ShipmentStatus, string>` makes the compiler reject the map the moment
  * a sixth status is added to the union in `src/types/database.ts`, which is the
@@ -17,13 +18,11 @@ import type { ShipmentStatus } from "@/types/database";
  * the production build output.
  */
 export const SHIPMENT_STATUS_STYLES: Record<ShipmentStatus, string> = {
-  Pendiente: "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-300",
-  "En tránsito":
-    "bg-blue-100 text-blue-800 dark:bg-blue-500/15 dark:text-blue-300",
-  Entregado:
-    "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-300",
-  Retrasado: "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-300",
-  Cancelado: "bg-gray-100 text-gray-700 dark:bg-gray-500/15 dark:text-gray-300",
+  Pendiente: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
+  "En tránsito": "bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300",
+  Entregado: "bg-lime-100 text-lime-700 dark:bg-lime-500/20 dark:text-lime-300",
+  Retrasado: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
+  Cancelado: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
 };
 
 /**

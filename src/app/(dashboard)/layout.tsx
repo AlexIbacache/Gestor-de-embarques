@@ -56,7 +56,7 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
   return (
     <TooltipProvider>
       <Toaster />
-      <div className="flex min-h-dvh flex-col bg-muted/30 md:flex-row">
+      <div className="flex min-h-dvh flex-col bg-slate-50 md:flex-row">
         <Sidebar user={userInfo} />
         {/* `min-w-0` is mandatory: without it the flex child sizes to its
             widest table and the whole page scrolls horizontally, which the

@@ -7,6 +7,7 @@
 @theme inline {
     --font-heading: var(--font-inter);
     --font-sans: var(--font-inter);
+
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -15,29 +16,44 @@
     --color-sidebar-primary: var(--sidebar-primary);
     --color-sidebar-foreground: var(--sidebar-foreground);
     --color-sidebar: var(--sidebar);
+
     --color-chart-5: var(--chart-5);
     --color-chart-4: var(--chart-4);
     --color-chart-3: var(--chart-3);
     --color-chart-2: var(--chart-2);
     --color-chart-1: var(--chart-1);
+
     --color-ring: var(--ring);
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
+
     --color-muted-foreground: var(--muted-foreground);
     --color-muted: var(--muted);
+
     --color-secondary-foreground: var(--secondary-foreground);
     --color-secondary: var(--secondary);
+
     --color-primary-foreground: var(--primary-foreground);
     --color-primary: var(--primary);
+
     --color-popover-foreground: var(--popover-foreground);
     --color-popover: var(--popover);
+
     --color-card-foreground: var(--card-foreground);
     --color-card: var(--card);
+
     --color-foreground: var(--foreground);
     --color-background: var(--background);
+
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-neutral: var(--neutral);
+    --color-danger: var(--danger);
+
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -47,120 +63,199 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* =========================================================
+   LIGHT THEME
+   ========================================================= */
+
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    /*
+     * Background general:
+     * gris muy claro, similar al diseño de referencia.
+     */
+    --background: oklch(0.965 0.008 100);
+
+    --foreground: oklch(0.16 0.01 90);
+
+    /*
+     * Cards blancas.
+     */
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: oklch(0.16 0.01 90);
+
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --popover-foreground: oklch(0.16 0.01 90);
+
+    /*
+     * Verde lima como color principal.
+     */
+    --primary: oklch(0.78 0.18 125);
+    --primary-foreground: oklch(0.18 0.02 120);
+
+    /*
+     * Superficies secundarias.
+     */
+    --secondary: oklch(0.96 0.01 100);
+    --secondary-foreground: oklch(0.22 0.01 90);
+
+    --muted: oklch(0.96 0.01 100);
+    --muted-foreground: oklch(0.55 0.01 90);
+
+    /*
+     * Accent suave.
+     */
+    --accent: oklch(0.95 0.08 125);
+    --accent-foreground: oklch(0.22 0.02 120);
+
+    /*
+     * Estados.
+     */
+    --destructive: oklch(0.62 0.22 25);
+
+    /*
+     * Bordes muy sutiles.
+     */
+    --border: oklch(0.91 0.01 100);
+    --input: oklch(0.91 0.01 100);
+    --ring: oklch(0.78 0.18 125);
+
+    /*
+     * Colores para gráficos.
+     *
+     * 1 -> verde lima
+     * 2 -> naranja
+     * 3 -> rojo
+     * 4 -> gris
+     * 5 -> gris oscuro
+     */
+    --chart-1: oklch(0.78 0.18 125);
+    --chart-2: oklch(0.78 0.13 75);
+    --chart-3: oklch(0.62 0.22 25);
+    --chart-4: oklch(0.65 0.03 90);
+    --chart-5: oklch(0.45 0.02 90);
+
+    /*
+     * Colores semánticos.
+     */
+    --success: oklch(0.78 0.18 125);
+    --warning: oklch(0.78 0.13 75);
+    --neutral: oklch(0.65 0.02 250);
+    --danger: oklch(0.62 0.22 25);
+
+    /*
+     * Bordes más redondeados para acercarnos
+     * al estilo de la imagen.
+     */
+    --radius: 0.9rem;
+
+    /*
+     * Sidebar.
+     */
+    --sidebar: oklch(1 0 0);
+    --sidebar-foreground: oklch(0.16 0.01 90);
+
+    --sidebar-primary: oklch(0.78 0.18 125);
+    --sidebar-primary-foreground: oklch(0.18 0.02 120);
+
+    --sidebar-accent: oklch(0.96 0.04 125);
+    --sidebar-accent-foreground: oklch(0.18 0.02 120);
+
+    --sidebar-border: oklch(0.92 0.01 100);
+    --sidebar-ring: oklch(0.78 0.18 125);
 }
+
+/* =========================================================
+   DARK THEME
+   ========================================================= */
 
 .dark {
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
+
     --card: oklch(0.205 0 0);
     --card-foreground: oklch(0.985 0 0);
+
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+
+    --primary: oklch(0.78 0.18 125);
+    --primary-foreground: oklch(0.18 0.02 120);
+
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
+
     --muted: oklch(0.269 0 0);
     --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
+
+    --accent: oklch(0.269 0.04 125);
     --accent-foreground: oklch(0.985 0 0);
+
     --destructive: oklch(0.704 0.191 22.216);
+
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --ring: oklch(0.78 0.18 125);
+
+    --chart-1: oklch(0.78 0.18 125);
+    --chart-2: oklch(0.78 0.13 75);
+    --chart-3: oklch(0.62 0.22 25);
+    --chart-4: oklch(0.65 0.03 90);
+    --chart-5: oklch(0.45 0.02 90);
+
+    --success: oklch(0.75 0.15 125);
+    --warning: oklch(0.7 0.15 75);
+    --neutral: oklch(0.6 0.02 250);
+    --danger: oklch(0.6 0.24 25);
+
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
+
+    --sidebar-primary: oklch(0.78 0.18 125);
+    --sidebar-primary-foreground: oklch(0.18 0.02 120);
+
+    --sidebar-accent: oklch(0.269 0.04 125);
     --sidebar-accent-foreground: oklch(0.985 0 0);
+
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.78 0.18 125);
 }
+
+/* =========================================================
+   BASE
+   ========================================================= */
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
+    * {
+        @apply border-border outline-ring/50;
     }
-  body {
-    @apply bg-background text-foreground;
+
+    body {
+        @apply bg-background text-foreground;
     }
-  html {
-    @apply font-sans;
+
+    html {
+        @apply font-sans;
     }
 }
 
-/*
- * Recharts focus outline.
- *
- * Clicking a chart segment (e.g. a donut slice) focuses the underlying SVG
- * path, and the browser paints a default focus ring around it. That ring is a
- * rectangle that does not follow the shape, so it reads as a rendering bug.
- * The charts are not interactive — there is no click handler and nothing to
- * focus — so the outline is removed at the source.
- */
+/* =========================================================
+   RECHARTS
+   ========================================================= */
+
 .recharts-wrapper :focus {
-  outline: none;
+    outline: none;
 }
 
-/*
- * Global reduced-motion guard.
- *
- * The JS animations in `src/components/ui/motion.tsx` already collapse to
- * `{ duration: 0 }` when `useReducedMotion()` is true. This covers the other
- * source of motion the project does not control: the CSS transitions that
- * `tw-animate-css` and Base UI attach through `data-open` / `data-closed`
- * attributes on dialogs, alert dialogs, sheets and popovers.
- *
- * Those are plain CSS, so nothing in JavaScript can reach them. Killing the
- * animation and transition at the source is the only fix that covers every
- * component without touching a single one of them.
- */
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
 }

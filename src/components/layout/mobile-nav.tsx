@@ -33,7 +33,7 @@ export function MobileNav({ user }: { user: SidebarUser }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur md:hidden">
+    <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-white/80 px-3 backdrop-blur md:hidden">
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetTrigger
           render={
@@ -47,7 +47,7 @@ export function MobileNav({ user }: { user: SidebarUser }) {
           <Menu className="size-5" aria-hidden="true" />
         </SheetTrigger>
 
-        <SheetContent side="left" className="w-72">
+        <SheetContent side="left" className="w-72 bg-white">
           <SheetHeader>
             <SheetTitle>Menú</SheetTitle>
           </SheetHeader>
@@ -72,8 +72,8 @@ export function MobileNav({ user }: { user: SidebarUser }) {
                   className={cn(
                     "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                     isActive
-                      ? "bg-primary/10 font-medium text-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                      ? "bg-gray-50 font-medium text-foreground"
+                      : "text-muted-foreground hover:bg-gray-50 hover:text-foreground",
                   )}
                 >
                   <Icon className="size-4 shrink-0" aria-hidden="true" />

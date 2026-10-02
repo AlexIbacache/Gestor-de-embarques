@@ -58,7 +58,7 @@ function QuickSearch() {
 
 export function Header({ user }: { user: SidebarUser }) {
   return (
-    <header className="sticky top-0 z-30 hidden h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:flex">
+    <header className="sticky top-0 z-30 hidden h-16 items-center gap-3 border-b bg-white/80 px-4 backdrop-blur md:flex">
       {/* No <h1> here: each page owns its own heading. This is app context only,
           the current section is not known up here. */}
       <span className="truncate text-sm text-muted-foreground">

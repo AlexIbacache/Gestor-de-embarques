@@ -55,7 +55,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-background md:flex md:sticky md:top-0">
+    <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-white md:flex md:sticky md:top-0">
       <div className="flex h-16 shrink-0 items-center gap-2.5 px-4">
         <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
           <Truck className="size-4" aria-hidden="true" />
@@ -81,8 +81,8 @@ export function Sidebar({ user }: { user: SidebarUser }) {
               className={cn(
                 "relative flex items-center gap-3 overflow-hidden rounded-lg px-3 py-2 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                 isActive
-                  ? "bg-primary/10 font-medium text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  ? "bg-gray-50 font-medium text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary"
+                  : "text-muted-foreground hover:bg-gray-50 hover:text-foreground",
               )}
             >
               <Icon className="size-4 shrink-0" aria-hidden="true" />

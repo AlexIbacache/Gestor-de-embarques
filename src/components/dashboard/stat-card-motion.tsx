@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { FadeIn } from "@/components/ui/motion";
+import { HoverElevation } from "@/components/ui/hover-elevation";
 import { cn } from "@/lib/utils";
 
 /**
@@ -26,6 +27,8 @@ export function StatCardMotion({
   className?: string;
 }) {
   return (
-    <FadeIn className={cn("h-full", className)}>{children}</FadeIn>
+    <FadeIn className={cn("h-full", className)}>
+      <HoverElevation>{children}</HoverElevation>
+    </FadeIn>
   );
 }
