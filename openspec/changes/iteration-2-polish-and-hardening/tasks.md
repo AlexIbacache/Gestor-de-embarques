@@ -53,7 +53,7 @@
 - [x] 6.6 Reemplazar el render del mensaje crudo de Supabase en el dashboard por mensajes en español mapeados, consistentes con el mapa de códigos PG de las actions; verificar forzando un error (p. ej. función ausente) que la UI muestra el mensaje seguro con opción de reintentar y nunca el texto técnico
 - [x] 6.7 Crear la utilidad de escaping de literales PostgREST en `src/lib/utils.ts` (escapar `\` y `"`, envolver en comillas, neutralizar `.` `:` `,` `(` `)` restantes) y aplicarla en las consultas `.or()` de clientes y embarques; verificar con la matriz manual de caracteres (`"`, `\`, `,`, `.`, `:`, `(`, `)`, `%`, `*`) que ninguna búsqueda rompe la query ni cambia su semántica
 - [x] 6.8 Modificar `loginAction` para honrar `next` validado (debe comenzar con `/` y no con `//`), con fallback `/dashboard`; verificar login con `?next=/embarques` (redirige ahí), con `?next=//evil.com` y `?next=https://evil.com` (caen a `/dashboard`) y sin `next` (va a `/dashboard`)
-- [ ] 6.9 Verificación del grupo: `pnpm build` y `pnpm lint` limpios, base migrada operativa, dashboard y listados funcionando de punta a punta; commits como `feat(db): ...` y `fix(security): ...` según corresponda
+- [x] 6.9 Verificación del grupo: `pnpm build` y `pnpm lint` limpios, base migrada operativa, dashboard y listados funcionando de punta a punta; commits como `feat(db): ...` y `fix(security): ...` según corresponda
 
 ## 7. Calidad de código y exactitud documental
 
