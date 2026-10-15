@@ -15,20 +15,36 @@ const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("es", {
 })
 
 /**
+ * Date strategy (design decision D20).
+ *
+ * Postgres `date` columns (e.g. `shipments.eta`) are CALENDAR dates, not
+ * instants: they name a civil day with no timezone. JavaScript parses a bare
+ * `"2026-10-15"` as UTC midnight, which renders as the previous day in any
+ * negative UTC offset (e.g. UTC-3). Appending `T00:00:00` forces a LOCAL-time
+ * parse so the civil date is preserved in every timezone.
+ *
+ * `created_at` (and every other `timestamptz`) is an instant and must be parsed
+ * as-is — never through this helper. Use `parseCalendarDate` for `date` columns
+ * and `new Date(iso)` for instants.
+ */
+export function parseCalendarDate(value: string): Date {
+  return new Date(`${value}T00:00:00`)
+}
+
+/**
  * Formats a Postgres `date` or `timestamptz` as `15 oct 2026` (date only).
  *
- * Accepts both shapes on purpose. A bare `yyyy-mm-dd` calendar date gets the
- * `T00:00:00` suffix, because `new Date("2026-10-15")` is parsed as UTC midnight
- * and renders as the previous day in any negative UTC offset. A value that
- * already carries a time component is parsed as-is and rendered in the server
- * timezone.
+ * Accepts both shapes on purpose. A bare `yyyy-mm-dd` calendar date goes through
+ * `parseCalendarDate` (local parse, see the date-strategy note above) so it
+ * renders on the correct civil day in negative UTC offsets. A value that already
+ * carries a time component is parsed as-is and rendered in the server timezone.
  *
  * Use `formatDateTime` when the time of day matters. Returns the raw input when
  * the value is not a parseable date.
  */
 export function formatDate(value: string): string {
   const hasTime = value.includes("T")
-  const date = new Date(hasTime ? value : `${value}T00:00:00`)
+  const date = hasTime ? new Date(value) : parseCalendarDate(value)
   if (Number.isNaN(date.getTime())) return value
   return DATE_FORMATTER.format(date)
 }

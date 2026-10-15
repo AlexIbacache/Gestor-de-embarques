@@ -4,6 +4,7 @@ import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import React from "react";
 
 import { CHART_PRIMARY_COLOR } from "@/components/dashboard/chart-colors";
+import { parseCalendarDate } from "@/lib/utils";
 
 export function ShipmentTimelineChart({ data }: { data: { created_at: string }[] }) {
   const monthly = data.reduce(
@@ -18,7 +19,9 @@ export function ShipmentTimelineChart({ data }: { data: { created_at: string }[]
   const chartData = Object.entries(monthly)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([month, count]) => ({
-      month: new Date(`${month}-01`).toLocaleDateString("es", {
+      // `month` is a `yyyy-mm` bucket key; parse `yyyy-mm-01` as a LOCAL calendar
+      // date so the label stays in the right month in negative UTC offsets.
+      month: parseCalendarDate(`${month}-01`).toLocaleDateString("es", {
         month: "short",
         year: "numeric",
       }),

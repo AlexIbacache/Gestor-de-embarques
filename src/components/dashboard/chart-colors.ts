@@ -1,4 +1,4 @@
-import type { ShipmentModality, ShipmentStatus } from "@/types/database";
+import type { ShipmentModality, ShipmentStatus } from "@/lib/domain/shipments";
 
 /**
  * Single source of truth for the dashboard chart palette.

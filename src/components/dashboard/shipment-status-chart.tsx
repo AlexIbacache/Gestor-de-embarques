@@ -3,18 +3,10 @@
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
 
 import { CHART_STATUS_COLORS } from "@/components/dashboard/chart-colors";
-import type { ShipmentStatus } from "@/types/database";
-
-const STATUSES: ShipmentStatus[] = [
-  "Pendiente",
-  "En tránsito",
-  "Entregado",
-  "Retrasado",
-  "Cancelado",
-];
+import { SHIPMENT_STATUSES } from "@/lib/domain/shipments";
 
 export function ShipmentStatusChart({ data }: { data: { status: string }[] }) {
-  const counts = STATUSES.map((status) => ({
+  const counts = SHIPMENT_STATUSES.map((status) => ({
     name: status,
     value: data.filter((d) => d.status === status).length,
     fill: CHART_STATUS_COLORS[status],

@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import type { ShipmentStatus } from "@/types/database";
+import type { ShipmentStatus } from "@/lib/domain/shipments";
 
 /**
  * Single source of truth for shipment status colours, per the project UI
@@ -10,8 +10,9 @@ import type { ShipmentStatus } from "@/types/database";
  * class strings per component.
  *
  * `Record<ShipmentStatus, string>` makes the compiler reject the map the moment
- * a sixth status is added to the union in `src/types/database.ts`, which is the
- * point: a new status must pick a colour here or the build breaks.
+ * a sixth status is added to the canonical union in
+ * `src/lib/domain/shipments.ts`, which is the point: a new status must pick a
+ * colour here or the build breaks.
  *
  * The values are full literal class strings (no `cva`, no interpolation), so
  * Tailwind 4's static extractor sees every candidate and emits them. Verified in
@@ -30,8 +31,8 @@ export const SHIPMENT_STATUS_STYLES: Record<ShipmentStatus, string> = {
  * and `Badge` adds no interactivity, so this stays usable from both Server and
  * Client Components without a `"use client"` boundary.
  *
- * The label is rendered verbatim from `status`, which keeps the accented
- * "En tránsito" intact — the database check constraint stores the same string.
+ * The label is rendered verbatim from `status`, which keeps accents (e.g. the
+ * in-transit value) intact — the database check constraint stores the same string.
  */
 export function ShipmentStatusBadge({ status }: { status: ShipmentStatus }) {
   return (

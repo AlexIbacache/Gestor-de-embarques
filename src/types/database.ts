@@ -1,11 +1,16 @@
-export type ShipmentModality = "FCL" | "LCL" | "AIR";
+/*
+ * Domain unions live in the canonical module (D18) and derive from the `as
+ * const` arrays there, so a new status/modality only has to be added once.
+ * They are imported and re-exported so existing imports from `@/types/database`
+ * keep working unchanged. `src/lib/domain/shipments.ts` must NOT import from
+ * this file, which keeps the dependency one-way and avoids an import cycle.
+ */
+import type {
+  ShipmentModality,
+  ShipmentStatus,
+} from "@/lib/domain/shipments";
 
-export type ShipmentStatus =
-  | "Pendiente"
-  | "En tránsito"
-  | "Entregado"
-  | "Retrasado"
-  | "Cancelado";
+export type { ShipmentStatus, ShipmentModality };
 
 export type Client = {
   id: string;

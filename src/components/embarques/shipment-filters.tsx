@@ -17,7 +17,7 @@ import {
 import {
   SHIPMENT_MODALITIES,
   SHIPMENT_STATUSES,
-} from "@/lib/validations/shipment";
+} from "@/lib/domain/shipments";
 
 const DEBOUNCE_MS = 350;
 

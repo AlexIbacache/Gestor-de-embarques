@@ -14,6 +14,12 @@
 --   en silencio, porque no hay sesión de Auth.
 --
 -- DECISIONES
+--   * Estados y modalidades son los del módulo canónico
+--     `src/lib/domain/shipments.ts` (fuente única de verdad, decisión D18):
+--     estados Pendiente / En tránsito / Entregado / Retrasado / Cancelado y
+--     modalidades FCL / LCL / AIR. Los literales de este seed se verificaron
+--     contra ese módulo; si las listas canónicas cambian, actualizá el seed en
+--     el mismo commit.
 --   * Las fechas son RELATIVAS a `current_date`, no absolutas. Con fechas fijas
 --     el dataset envejece: en unos meses los 40 embarques figuran vencidos y el
 --     filtro por estado deja de reflejar una operación real.

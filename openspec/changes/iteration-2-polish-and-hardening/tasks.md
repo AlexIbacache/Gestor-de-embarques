@@ -2,7 +2,7 @@
 
 ## 1. Baseline y fundamentos de dominio
 
-- [ ] 1.1 Commitear el árbol de trabajo pendiente (diálogos de eliminación ya implementados, `chart-colors.ts`, README, cambios archivados) como commits convencionales separados por intención; verificar con `git log --oneline -5` que cada commit usa tipo convencional en imperativo y con `git status` que el árbol queda limpio
+- [x] 1.1 Commitear el árbol de trabajo pendiente (diálogos de eliminación ya implementados, `chart-colors.ts`, README, cambios archivados) como commits convencionales separados por intención; verificar con `git log --oneline -5` que cada commit usa tipo convencional en imperativo y con `git status` que el árbol queda limpio
 - [ ] 1.2 Crear el módulo único de dominio `src/lib/domain/shipments.ts` exportando los arrays `const` de estados (5) y modalidades (3); refactorizar `src/lib/validations/shipment.ts`, `src/types/database.ts`, `shipment-status-badge.tsx`, `chart-colors.ts` y los filtros `.eq()` de `dashboard/page.tsx` para importar desde ahí; verificar con `pnpm build` y con búsqueda `rg "Pendiente.*En tránsito" src/` que solo el módulo de dominio y el seed definen las listas
 - [ ] 1.3 Alinear `supabase/seed.sql` con el módulo de dominio (comentario que referencia la fuente canónica, valores idénticos); verificar ejecutando schema + seed en la base de desarrollo sin errores
 - [ ] 1.4 Documentar la estrategia de fechas en `src/lib/utils.ts` (`date` = fecha de calendario con parse local `T00:00:00`, `created_at` = instante) y corregir el parse del timeline en `shipment-timeline-chart.tsx` para que `AAAA-MM-01` se interprete como fecha local; verificar con `pnpm build` y manualmente (zona UTC-3) que el bucket "2026-10" renderiza octubre, no septiembre

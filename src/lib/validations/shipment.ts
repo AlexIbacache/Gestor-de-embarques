@@ -1,16 +1,9 @@
 import { z } from "zod";
 
-/** Ordered so the `<Select>` filters can iterate it directly. */
-export const SHIPMENT_MODALITIES = ["FCL", "LCL", "AIR"] as const;
-
-/** Ordered so the `<Select>` filters can iterate it directly. */
-export const SHIPMENT_STATUSES = [
-  "Pendiente",
-  "En tránsito",
-  "Entregado",
-  "Retrasado",
-  "Cancelado",
-] as const;
+import {
+  SHIPMENT_MODALITIES,
+  SHIPMENT_STATUSES,
+} from "@/lib/domain/shipments";
 
 export const shipmentSchema = z.object({
   reference: z.string().trim().min(1, "La referencia es obligatoria"),

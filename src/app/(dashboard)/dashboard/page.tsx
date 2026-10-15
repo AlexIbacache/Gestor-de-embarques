@@ -29,6 +29,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { createClient } from "@/lib/supabase/server";
+import { SHIPMENT_STATUS } from "@/lib/domain/shipments";
 import { formatDateTime } from "@/lib/utils";
 
 import type { ShipmentWithClient } from "@/types/database";
@@ -91,7 +92,9 @@ async function DashboardContent() {
         count: "exact",
         head: true,
       })
-      .eq("status", "En tránsito"),
+      // Named constant, not a positional index: reordering the array can never
+      // silently change which status this filter targets.
+      .eq("status", SHIPMENT_STATUS.IN_TRANSIT),
 
     supabase
       .from("shipments")
@@ -99,7 +102,7 @@ async function DashboardContent() {
         count: "exact",
         head: true,
       })
-      .eq("status", "Retrasado"),
+      .eq("status", SHIPMENT_STATUS.DELAYED),
 
     supabase
       .from("shipments")

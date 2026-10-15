@@ -24,7 +24,7 @@ import { createClient } from "@/lib/supabase/server";
 import {
   SHIPMENT_MODALITIES,
   SHIPMENT_STATUSES,
-} from "@/lib/validations/shipment";
+} from "@/lib/domain/shipments";
 import { formatSearchTerm } from "@/lib/utils";
 import type {
   Client,
@@ -136,7 +136,7 @@ function parseSearch(raw: string | undefined): string | undefined {
  *
  * NFC on both sides handles `"En tránsito"`. `URLSearchParams` decodes
  * `?status=En%20tr%C3%A1nsito` into the precomposed `á` (U+00E1) that the
- * `SHIPMENT_STATUSES` literal in `src/lib/validations/shipment.ts` also holds, so
+ * `SHIPMENT_STATUSES` array in `src/lib/domain/shipments.ts` also holds, so
  * a byte-for-byte comparison matches. Normalising both sides anyway makes the
  * comparison survive a value pasted from a source that stores the decomposed
  * form (`a` + U+0301), which is not the same string and would otherwise be

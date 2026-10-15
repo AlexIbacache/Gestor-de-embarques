@@ -30,8 +30,8 @@ import {
 import {
   SHIPMENT_MODALITIES,
   SHIPMENT_STATUSES,
-  shipmentSchema,
-} from "@/lib/validations/shipment";
+} from "@/lib/domain/shipments";
+import { shipmentSchema } from "@/lib/validations/shipment";
 import type { Client, Shipment } from "@/types/database";
 
 /**
