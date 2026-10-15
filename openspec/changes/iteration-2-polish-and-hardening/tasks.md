@@ -64,6 +64,6 @@
 ## 8. Cierre e integración
 
 - [ ] 8.1 Recorrido manual de integración completo: login con y sin `next`, dashboard (conteos, gráficos, errores, empty states), clientes y embarques (búsqueda con caracteres especiales, filtros, orden, paginación con tamaño y clamp, crear/editar/eliminar con guards), detalle, loading de cada ruta, logout con feedback, sidebar colapsable, búsqueda móvil, ambos temas en los tres breakpoints; verificar que cada ítem del recorrido pasa
-- [ ] 8.2 Verificación estructural final: `pnpm build` y `pnpm lint` limpios, `openspec validate iteration-2-polish-and-hardening --strict` sin errores
-- [ ] 8.3 Pasada final de README (features actuales: dark mode, paginación con tamaño, filtros de fecha, constraints de base de datos, RPC del dashboard); verificar que cada afirmación del README se sostiene contra el código
-- [ ] 8.4 Confirmar el acuerdo de commits convencionales: `git log --oneline` muestra que cada grupo aterrizó como al menos un commit `feat`/`fix`/`refactor`/`docs`/`style` en imperativo, que revela la intención y que ningún commit lleva atribución de IA; commit final `docs: ...` si la pasada de README lo requiere
+- [x] 8.2 Verificación estructural final: `pnpm build` y `pnpm lint` limpios, `openspec validate iteration-2-polish-and-hardening --strict` sin errores
+- [x] 8.3 Pasada final de README (features actuales: dark mode, paginación con tamaño, filtros de fecha, constraints de base de datos, RPC del dashboard); verificar que cada afirmación del README se sostiene contra el código
+- [x] 8.4 Confirmar el acuerdo de commits convencionales: `git log --oneline` muestra que cada grupo aterrizó como al menos un commit `feat`/`fix`/`refactor`/`docs`/`style` en imperativo, que revela la intención y que ningún commit lleva atribución de IA; commit final `docs: ...` si la pasada de README lo requiere

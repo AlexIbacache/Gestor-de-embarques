@@ -183,6 +183,12 @@ Lo que cambiaría en un producto multi-tenant: una columna `owner_id` u `organiz
 
 Quien llegue con la memoria muscular de Radix va a escribir `onValueChange={(e) => setX(e.target.value)}`, va a poner `value=""` para "todos" y va a esperar que el botón de confirmación cierre el modal. Los tres fallan.
 
+### Tema claro/oscuro
+
+`next-themes` monta un `ThemeProvider` (`attribute="class"`, `defaultTheme="system"`, `disableTransitionOnChange`) en `src/app/layout.tsx`, y el toggle vive en el header de desktop y también dentro del sheet de navegación móvil. La preferencia persiste y, sin elección explícita, el tema sigue al sistema.
+
+La trampa que costó tiempo: Tailwind v4 con `@theme inline` emite los alias `--color-*` **una sola vez sobre `:root`** (`--color-x: var(--x)`) y **nunca los redeclara dentro de `.dark`**. Los que realmente cambian con el tema son los tokens base (`--primary`, `--chart-1`, `--success`, …), declarados en ambos bloques. Por eso el CSS crudo y los props de SVG (gráficos, `stroke`, `fill`) referencian los tokens base y no los alias.
+
 ### Fechas
 
 `eta` es un Postgres `date` y viaja como string `yyyy-mm-dd` en las dos direcciones: PostgREST lo acepta y lo devuelve con esa forma, que es exactamente la que valida `shipmentSchema`. Nunca pasa por `new Date()` en el camino de ida.
