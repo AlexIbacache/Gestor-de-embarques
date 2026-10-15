@@ -143,7 +143,7 @@ async function DashboardContent() {
 
   if (firstError) {
     return (
-      <div className="min-h-full bg-background p-5 md:p-8">
+      <div className="min-h-full p-5 md:p-8">
         <div className="mx-auto max-w-[1600px]">
           <Alert variant="destructive">
             <AlertCircle />
@@ -178,7 +178,7 @@ async function DashboardContent() {
      ========================================================= */
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full">
       <div className="mx-auto max-w-[1600px] space-y-6 p-5 md:p-8">
 
         {/* =====================================================
@@ -432,7 +432,7 @@ function NoShipmentsYet() {
 
 function DashboardSkeleton() {
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full">
       <div className="mx-auto max-w-[1600px] space-y-6 p-5 md:p-8">
 
         {/* Header */}

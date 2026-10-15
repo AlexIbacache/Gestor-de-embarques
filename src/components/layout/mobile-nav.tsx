@@ -7,6 +7,7 @@ import { LogOut, Menu, Search } from "lucide-react";
 
 import { logoutAction } from "@/app/actions/auth";
 import { NAV_ITEMS, type SidebarUser } from "@/components/layout/sidebar";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -86,16 +87,22 @@ export function MobileNav({ user }: { user: SidebarUser }) {
           <div className="mt-auto">
             <Separator />
             <div className="space-y-2 p-3">
-              <div className="min-w-0 px-1">
-                <p className="truncate text-sm font-medium" title={user.name}>
-                  {user.name}
-                </p>
-                <p
-                  className="truncate text-xs text-muted-foreground"
-                  title={user.email}
-                >
-                  {user.email}
-                </p>
+              {/* The header (and its toggle) is `hidden md:flex`, so the theme
+                  switch has to live here too or it is unreachable on mobile. */}
+              <div className="flex items-center gap-2">
+                <div className="min-w-0 flex-1 px-1">
+                  <p className="truncate text-sm font-medium" title={user.name}>
+                    {user.name}
+                  </p>
+                  <p
+                    className="truncate text-xs text-muted-foreground"
+                    title={user.email}
+                  >
+                    {user.email}
+                  </p>
+                </div>
+
+                <ThemeToggle />
               </div>
 
               <Button

@@ -23,8 +23,8 @@ export function ShipmentModalityChart({ data }: { data: { modality: string }[] }
   return (
     <ResponsiveContainer width="100%" height={280}>
       <BarChart data={counts} layout="vertical">
-        <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} />
-        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tickMargin={16} />
+        <XAxis type="number" allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "var(--muted-foreground)" }} />
+        <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} tickMargin={16} tick={{ fill: "var(--muted-foreground)" }} />
         <Bar dataKey="count" name="Embarques" radius={[4, 4, 0, 0]} barSize={40}>
           {counts.map((entry) => (
             <Cell key={entry.name} fill={entry.fill} />

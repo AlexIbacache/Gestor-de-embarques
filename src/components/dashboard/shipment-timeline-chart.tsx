@@ -55,8 +55,8 @@ export function ShipmentTimelineChart({ data }: { data: { created_at: string }[]
         // @ts-expect-error - defs is supported by Recharts but not in TypeScript types
         defs={defs}
       >
-        <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={8} />
-        <YAxis allowDecimals={false} axisLine={false} tickLine={false} />
+        <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={8} tick={{ fill: "var(--muted-foreground)" }} />
+        <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "var(--muted-foreground)" }} />
         <Area
           type="monotone"
           dataKey="count"

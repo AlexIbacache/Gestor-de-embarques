@@ -4,6 +4,7 @@ import { type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import type { SidebarUser } from "@/components/layout/sidebar";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Input } from "@/components/ui/input";
 
 /**
@@ -67,6 +68,8 @@ export function Header({ user }: { user: SidebarUser }) {
 
       <div className="ml-auto flex min-w-0 items-center gap-3">
         <QuickSearch />
+
+        <ThemeToggle />
 
         {/* `min-w-0` + `truncate` so a long email cannot push the bar wide and
             cause horizontal overflow. */}

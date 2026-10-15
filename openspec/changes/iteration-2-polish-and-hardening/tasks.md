@@ -10,12 +10,12 @@
 
 ## 2. Identidad visual y modo oscuro
 
-- [ ] 2.1 Reemplazar los tokens light en `src/app/globals.css` por la paleta logística oklch (primario azul marino/acero, acento ámbar, neutros pizarra, roles de estado armonizados); verificar con `pnpm dev` que botones primarios, enlaces activos y focos usan el nuevo primario
-- [ ] 2.2 Completar el bloque `.dark` con los mismos roles (fondo, superficie, texto, borde, ring, sidebar, charts, estados) en valores coherentes con la paleta; verificar alternando la clase `dark` en DevTools que ningún rol queda sin definir
-- [ ] 2.3 Montar `ThemeProvider` de next-themes en `src/app/layout.tsx` (`attribute="class"`, `defaultTheme="system"`, `disableTransitionOnChange`) y agregar el toggle claro/oscuro en el header; verificar que el tema sigue al sistema por defecto, que el toggle cambia el tema y que la elección persiste tras recargar
-- [ ] 2.4 Unificar el fondo: el layout de `(dashboard)` define el único fondo con el token semántico y se eliminan los re-envoltorios `bg-background` de `dashboard/page.tsx`; verificar visualmente que dashboard, clientes, embarques y detalle comparten exactamente el mismo fondo en light y en dark
-- [ ] 2.5 Auditar `chart-colors.ts` y los tres gráficos para que resuelvan colores desde los tokens del tema activo; verificar legibilidad de dona, barras y área en ambos temas
-- [ ] 2.6 Verificar contraste WCAG AA (texto sobre primario, acento y estados) en ambos temas con las herramientas del navegador; commit del grupo como `feat(theme): ...` y verificar `git log -1 --oneline`
+- [x] 2.1 Reemplazar los tokens light en `src/app/globals.css` por la paleta logística oklch (primario azul marino/acero, acento ámbar, neutros pizarra, roles de estado armonizados); verificar con `pnpm dev` que botones primarios, enlaces activos y focos usan el nuevo primario
+- [x] 2.2 Completar el bloque `.dark` con los mismos roles (fondo, superficie, texto, borde, ring, sidebar, charts, estados) en valores coherentes con la paleta; verificar alternando la clase `dark` en DevTools que ningún rol queda sin definir
+- [x] 2.3 Montar `ThemeProvider` de next-themes en `src/app/layout.tsx` (`attribute="class"`, `defaultTheme="system"`, `disableTransitionOnChange`) y agregar el toggle claro/oscuro en el header; verificar que el tema sigue al sistema por defecto, que el toggle cambia el tema y que la elección persiste tras recargar
+- [x] 2.4 Unificar el fondo: el layout de `(dashboard)` define el único fondo con el token semántico y se eliminan los re-envoltorios `bg-background` de `dashboard/page.tsx`; verificar visualmente que dashboard, clientes, embarques y detalle comparten exactamente el mismo fondo en light y en dark
+- [x] 2.5 Auditar `chart-colors.ts` y los tres gráficos para que resuelvan colores desde los tokens del tema activo; verificar legibilidad de dona, barras y área en ambos temas
+- [x] 2.6 Verificar contraste WCAG AA (texto sobre primario, acento y estados) en ambos temas con las herramientas del navegador; commit del grupo como `feat(theme): ...` y verificar `git log -1 --oneline`
 
 ## 3. Estados de carga y consistencia de feedback
 
