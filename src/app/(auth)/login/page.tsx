@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { createClient } from "@/lib/supabase/server";
 
 // Authenticated visitors are bounced to the dashboard by the middleware; this
@@ -37,10 +38,12 @@ export default async function LoginPage({
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (user) redirect("/dashboard");
-
   const params = await searchParams;
   const next = Array.isArray(params.next) ? params.next[0] : params.next;
+
+  // Same resolver as the middleware and the login action: an authenticated
+  // visitor continues to where they were headed, not blindly to the dashboard.
+  if (user) redirect(safeRedirectPath(next));
 
   return (
     <TooltipProvider>

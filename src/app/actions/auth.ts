@@ -2,6 +2,7 @@
 
 import { z } from "zod";
 
+import { safeRedirectPath } from "@/lib/safe-redirect";
 import { createClient } from "@/lib/supabase/server";
 
 export type ActionResult<T = undefined> =
@@ -27,36 +28,11 @@ const loginSchema = z.object({
 const GENERIC_LOGIN_ERROR = "No pudimos iniciar sesión. Intentá de nuevo.";
 const INVALID_CREDENTIALS_ERROR = "Las credenciales son incorrectas.";
 
-/** Default landing page, used whenever `next` is absent or rejected. */
-const DEFAULT_REDIRECT = "/dashboard";
-
-/**
- * Returns `next` only when it is a safe internal path, otherwise
- * {@link DEFAULT_REDIRECT}. This is the open-redirect guard: `next` is
- * attacker-controllable (it is echoed into the login URL by the middleware and
- * travels through a hidden form field), so it is validated server-side before
- * the action ever reports it as a destination.
- *
- * Accepted: a path that starts with exactly one `/` (e.g. `/embarques`,
- * `/embarques?page=2`).
- *
- * Rejected, all falling back to `/dashboard`:
- *   - anything that does not start with `/` (`dashboard`, `https://evil.com`);
- *   - a protocol-relative URL (`//evil.com`, `///evil.com`);
- *   - any value containing a backslash (`/\evil.com`), which some browsers
- *     normalise to `//evil.com`;
- *   - any value containing control characters or whitespace, which browsers
- *     strip before parsing and which could smuggle a `//` past the checks above
- *     (e.g. `/<tab>/evil.com`).
+/*
+ * The open-redirect guard is imported from `@/lib/safe-redirect` and shared with
+ * the middleware and the login page, so the three server-side consumers of
+ * `next` apply one rule instead of three copies that drift.
  */
-function safeRedirectPath(value: unknown): string {
-  if (typeof value !== "string" || value.length === 0) return DEFAULT_REDIRECT;
-  if (!value.startsWith("/")) return DEFAULT_REDIRECT;
-  if (value.startsWith("//")) return DEFAULT_REDIRECT;
-  if (value.includes("\\")) return DEFAULT_REDIRECT;
-  if (/[\u0000-\u001F\u007F\s]/.test(value)) return DEFAULT_REDIRECT;
-  return value;
-}
 
 export async function loginAction(
   prevState: LoginState,

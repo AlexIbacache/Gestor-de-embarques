@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { DEFAULT_REDIRECT_PATH, safeRedirectPath } from "@/lib/safe-redirect";
 import { updateSessionWithUser } from "@/lib/supabase/middleware";
 
 /**
@@ -8,8 +9,10 @@ import { updateSessionWithUser } from "@/lib/supabase/middleware";
  */
 const PROTECTED_PREFIXES = ["/dashboard", "/clientes", "/embarques"];
 
-/** Default landing page, so the `next` round trip would be pointless. */
-const DEFAULT_LANDING_PATH = "/dashboard";
+/**
+ * Both guards below resolve their destination through `@/lib/safe-redirect`, so
+ * the middleware, the login page and the login action cannot drift apart.
+ */
 
 export async function middleware(request: NextRequest) {
   // One call refreshes the session, validates the JWT and yields the user, so
@@ -28,7 +31,7 @@ export async function middleware(request: NextRequest) {
     // Preserve the target so the user returns there after signing in, but skip
     // the query string for the default landing page.
     const target = `${pathname}${search}`;
-    if (target !== DEFAULT_LANDING_PATH) {
+    if (target !== DEFAULT_REDIRECT_PATH) {
       loginUrl.searchParams.set("next", target);
     }
 
@@ -36,8 +39,16 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname === "/login" && user) {
+    // An already-authenticated visitor goes where they were headed, not blindly
+    // to the dashboard. Hardcoding `/dashboard` here is what silently ate the
+    // preserved `next`: the moment the login action sets the session, Next
+    // re-renders the current `/login?...&next=...` route, this branch fired and
+    // the hardcoded dashboard won the race against the client's navigation.
     const redirectResponse = NextResponse.redirect(
-      new URL(DEFAULT_LANDING_PATH, request.url),
+      new URL(
+        safeRedirectPath(request.nextUrl.searchParams.get("next")),
+        request.url,
+      ),
     );
 
     // The refresh above emitted Set-Cookie on `response`; a bare redirect would
