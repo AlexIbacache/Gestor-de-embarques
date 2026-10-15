@@ -19,13 +19,28 @@ import { createClient } from "@/lib/supabase/server";
 // `.env.local` ships with empty Supabase credentials.
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+/**
+ * Next 15+ delivers `searchParams` as a Promise. The value is widened to
+ * `string | string[]` because a repeated param arrives as an array; only the
+ * first value is used and it is validated again in `loginAction`, so the page
+ * never has to trust it.
+ */
+type LoginSearchParams = Promise<{ next?: string | string[] }>;
+
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: LoginSearchParams;
+}) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
   if (user) redirect("/dashboard");
+
+  const params = await searchParams;
+  const next = Array.isArray(params.next) ? params.next[0] : params.next;
 
   return (
     <TooltipProvider>
@@ -42,7 +57,7 @@ export default async function LoginPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <LoginForm />
+            <LoginForm next={next} />
           </CardContent>
         </Card>
       </main>

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FadeIn } from "@/components/ui/motion";
 import { HoverElevation } from "@/components/ui/hover-elevation";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { DashboardStats } from "@/types/database";
 
 /**
  * Matches Tailwind's `sm` boundary: below it the dashboard is a single narrow
@@ -116,15 +117,17 @@ function ChartCard({
   );
 }
 
+/**
+ * `stats` is the single pre-aggregated JSON value returned by the
+ * `get_dashboard_stats()` RPC (design decision D16). The three charts read the
+ * `by_status`, `by_modality` and `monthly` slices from it; none of them receives
+ * raw shipment rows any more.
+ */
 export function DashboardCharts({
-  statusData,
-  modalityData,
-  timelineData,
+  stats,
   mode = "all",
 }: {
-  statusData: { status: string }[];
-  modalityData: { modality: string }[];
-  timelineData: { created_at: string }[];
+  stats: DashboardStats;
   mode?: "all" | "status" | "timeline" | "modality";
 }) {
   const isNarrow = useIsNarrowViewport();
@@ -142,7 +145,7 @@ export function DashboardCharts({
         description="Distribución actual según el estado"
       >
         <div className="min-h-[280px] min-w-0">
-          <ShipmentStatusChart data={statusData} />
+          <ShipmentStatusChart counts={stats.by_status} />
         </div>
       </ChartCard>
     );
@@ -161,7 +164,7 @@ export function DashboardCharts({
         description="Evolución de los embarques registrados"
       >
         <div className="min-h-[280px] min-w-0">
-          <ShipmentTimelineChart data={timelineData} compact={isNarrow} />
+          <ShipmentTimelineChart buckets={stats.monthly} compact={isNarrow} />
         </div>
       </ChartCard>
     );
@@ -180,7 +183,7 @@ export function DashboardCharts({
         description="Distribución según tipo de transporte"
       >
         <div className="min-h-[280px] min-w-0">
-          <ShipmentModalityChart data={modalityData} compact={isNarrow} />
+          <ShipmentModalityChart counts={stats.by_modality} compact={isNarrow} />
         </div>
       </ChartCard>
     );
@@ -199,7 +202,7 @@ export function DashboardCharts({
         description="Distribución actual según el estado"
       >
         <div className="min-h-[280px] min-w-0">
-          <ShipmentStatusChart data={statusData} />
+          <ShipmentStatusChart counts={stats.by_status} />
         </div>
       </ChartCard>
 
@@ -208,7 +211,7 @@ export function DashboardCharts({
         description="Distribución según tipo de transporte"
       >
         <div className="min-h-[280px] min-w-0">
-          <ShipmentModalityChart data={modalityData} compact={isNarrow} />
+          <ShipmentModalityChart counts={stats.by_modality} compact={isNarrow} />
         </div>
       </ChartCard>
 
@@ -218,7 +221,7 @@ export function DashboardCharts({
         className="lg:col-span-2"
       >
         <div className="min-h-[280px] min-w-0">
-          <ShipmentTimelineChart data={timelineData} compact={isNarrow} />
+          <ShipmentTimelineChart buckets={stats.monthly} compact={isNarrow} />
         </div>
       </ChartCard>
     </div>

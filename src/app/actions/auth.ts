@@ -13,8 +13,8 @@ export type LoginState = {
   /**
    * Set only on success: the destination the client navigates to after showing
    * the confirmation toast. `loginAction` deliberately does not `redirect()`
-   * itself, so the toast has time to render. Task 6.8 will replace the
-   * hardcoded value with the validated `next` parameter.
+   * itself, so the toast has time to render. It holds the validated `next`
+   * parameter, or `/dashboard` when `next` is absent or unsafe.
    */
   redirectTo: string | null;
 };
@@ -27,12 +27,44 @@ const loginSchema = z.object({
 const GENERIC_LOGIN_ERROR = "No pudimos iniciar sesión. Intentá de nuevo.";
 const INVALID_CREDENTIALS_ERROR = "Las credenciales son incorrectas.";
 
+/** Default landing page, used whenever `next` is absent or rejected. */
+const DEFAULT_REDIRECT = "/dashboard";
+
+/**
+ * Returns `next` only when it is a safe internal path, otherwise
+ * {@link DEFAULT_REDIRECT}. This is the open-redirect guard: `next` is
+ * attacker-controllable (it is echoed into the login URL by the middleware and
+ * travels through a hidden form field), so it is validated server-side before
+ * the action ever reports it as a destination.
+ *
+ * Accepted: a path that starts with exactly one `/` (e.g. `/embarques`,
+ * `/embarques?page=2`).
+ *
+ * Rejected, all falling back to `/dashboard`:
+ *   - anything that does not start with `/` (`dashboard`, `https://evil.com`);
+ *   - a protocol-relative URL (`//evil.com`, `///evil.com`);
+ *   - any value containing a backslash (`/\evil.com`), which some browsers
+ *     normalise to `//evil.com`;
+ *   - any value containing control characters or whitespace, which browsers
+ *     strip before parsing and which could smuggle a `//` past the checks above
+ *     (e.g. `/<tab>/evil.com`).
+ */
+function safeRedirectPath(value: unknown): string {
+  if (typeof value !== "string" || value.length === 0) return DEFAULT_REDIRECT;
+  if (!value.startsWith("/")) return DEFAULT_REDIRECT;
+  if (value.startsWith("//")) return DEFAULT_REDIRECT;
+  if (value.includes("\\")) return DEFAULT_REDIRECT;
+  if (/[\u0000-\u001F\u007F\s]/.test(value)) return DEFAULT_REDIRECT;
+  return value;
+}
+
 export async function loginAction(
   prevState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const next = formData.get("next");
 
   const parsed = loginSchema.safeParse({ email, password });
   if (!parsed.success) {
@@ -61,9 +93,9 @@ export async function loginAction(
 
   // Success: report the destination instead of redirecting. A `redirect()` here
   // would navigate before the client's confirmation toast could render, the same
-  // structural problem the logout action avoids. Hardcoded target for now; task
-  // 6.8 fills it with the validated `next` without re-plumbing the form.
-  return { error: null, redirectTo: "/dashboard" };
+  // structural problem the logout action avoids. The destination is the
+  // validated `next` when it is a safe internal path, else `/dashboard`.
+  return { error: null, redirectTo: safeRedirectPath(next) };
 }
 
 /**

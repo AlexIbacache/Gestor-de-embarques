@@ -42,3 +42,27 @@ export type Shipment = {
 export type ShipmentWithClient = Shipment & {
   client: Client | null;
 };
+
+/**
+ * A pre-aggregated monthly bucket from `get_dashboard_stats()`.
+ * `month` is the calendar key `AAAA-MM` (from `date_trunc('month', created_at)`).
+ */
+export type DashboardMonthlyBucket = {
+  month: string;
+  count: number;
+};
+
+/**
+ * The single JSON value returned by the `get_dashboard_stats()` RPC. All counts
+ * are computed in PostgreSQL; the dashboard renders this shape directly and never
+ * downloads shipment rows to aggregate them in JavaScript (design decision D16).
+ *
+ * `by_status` and `by_modality` are sparse maps: a value with no rows is absent,
+ * so callers look up with `?? 0`.
+ */
+export type DashboardStats = {
+  total: number;
+  by_status: Record<string, number>;
+  by_modality: Record<string, number>;
+  monthly: DashboardMonthlyBucket[];
+};

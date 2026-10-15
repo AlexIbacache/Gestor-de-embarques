@@ -11,15 +11,23 @@ import { SHIPMENT_STATUSES } from "@/lib/domain/shipments";
  * at `lg` where the dashboard grid puts this card in a half-width column. The
  * labels therefore live in a wrapping list under the donut instead: the text
  * reflows at any width, nothing is truncated, and the palette is unchanged.
+ *
+ * `counts` is the pre-aggregated `by_status` map from `get_dashboard_stats()`:
+ * the server already grouped the rows, so this component only maps the domain
+ * order and colours onto the counts.
  */
-export function ShipmentStatusChart({ data }: { data: { status: string }[] }) {
-  const counts = SHIPMENT_STATUSES.map((status) => ({
+export function ShipmentStatusChart({
+  counts,
+}: {
+  counts: Record<string, number>;
+}) {
+  const data = SHIPMENT_STATUSES.map((status) => ({
     name: status,
-    value: data.filter((d) => d.status === status).length,
+    value: counts[status] ?? 0,
     fill: CHART_STATUS_COLORS[status],
   })).filter((d) => d.value > 0);
 
-  if (counts.length === 0) {
+  if (data.length === 0) {
     return (
       <div className="flex h-[240px] items-center justify-center text-sm text-muted-foreground">
         No hay datos para mostrar
@@ -32,7 +40,7 @@ export function ShipmentStatusChart({ data }: { data: { status: string }[] }) {
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
-            data={counts}
+            data={data}
             dataKey="value"
             nameKey="name"
             cx="50%"
@@ -41,7 +49,7 @@ export function ShipmentStatusChart({ data }: { data: { status: string }[] }) {
             outerRadius="68%"
             labelLine={false}
           >
-            {counts.map((entry) => (
+            {data.map((entry) => (
               <Cell key={entry.name} fill={entry.fill} />
             ))}
           </Pie>
@@ -52,7 +60,7 @@ export function ShipmentStatusChart({ data }: { data: { status: string }[] }) {
         aria-label="Detalle de embarques por estado"
         className="flex flex-col gap-1.5"
       >
-        {counts.map((entry) => (
+        {data.map((entry) => (
           <li
             key={entry.name}
             className="flex items-center gap-2 text-xs text-muted-foreground"

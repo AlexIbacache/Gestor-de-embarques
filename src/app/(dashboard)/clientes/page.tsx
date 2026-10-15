@@ -23,7 +23,7 @@ import {
 } from "@/lib/pagination";
 import { createClient } from "@/lib/supabase/server";
 import {
-  formatSearchTerm,
+  escapePostgrestValue,
   parseCalendarDateParam,
   startOfNextUtcDay,
   startOfUtcDay,
@@ -74,14 +74,14 @@ function parseOrder(raw: string | undefined): "asc" | "desc" {
 }
 
 /**
- * Sanitises `?search=` for PostgREST and returns `undefined` when nothing
- * survives. `formatSearchTerm` already strips the characters that could escape
- * the filter value; a term that reduces to `""` is treated as "no search", so
- * `ilike '%%'` is never sent — it would match every row and filter nothing.
+ * Normalises `?search=` and returns `undefined` when nothing survives. A term
+ * that reduces to `""` is treated as "no search", so `ilike '%%'` is never sent
+ * — it would match every row and filter nothing. The PostgREST grammar escaping
+ * happens later, in `escapePostgrestValue`, at the point of interpolation.
  */
 function parseSearch(raw: string | undefined): string | undefined {
-  const sanitized = formatSearchTerm(raw ?? "");
-  return sanitized ? sanitized : undefined;
+  const trimmed = (raw ?? "").trim();
+  return trimmed ? trimmed : undefined;
 }
 
 function resolveSortColumn(raw: string | undefined): SortableColumn {
@@ -176,12 +176,14 @@ async function ClientsResults({ params }: { params: ResolvedSearchParams }) {
   if (search) {
     // One `.or()` covers name, email and company in a single request, which is
     // what the input placeholder promises. `.ilike("name", ...)` alone would
-    // make the placeholder lie. `search` is already `formatSearchTerm`-sanitised,
-    // so `,` and the `%*,()` characters that would let a value break out of the
-    // filter clause are gone.
+    // make the placeholder lie. The term is quoted for PostgREST by
+    // `escapePostgrestValue`, so a `,` (clause separator), `.`/`:` (operator
+    // separator) or `(`/`)`/`"`/`\` in the value can neither break the query nor
+    // open another clause; it is matched as literal text.
     const pattern = `%${search}%`;
+    const value = escapePostgrestValue(pattern);
     query = query.or(
-      `name.ilike.${pattern},email.ilike.${pattern},company.ilike.${pattern}`,
+      `name.ilike.${value},email.ilike.${value},company.ilike.${value}`,
     );
   }
 

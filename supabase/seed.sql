@@ -26,6 +26,11 @@
 --   * `eta` en el pasado para "Entregado" y "Retrasado", en el futuro para
 --     "Pendiente" y "En tránsito". Sin esa coherencia, el badge de estado
 --     contradice la fecha visible al lado.
+--   * Los datos cumplen los CHECK constraints y los límites de longitud de
+--     `schema.sql` (decisión D17): estados/modalidades canónicos, referencias
+--     ≤ 60, nombres ≤ 120, emails ≤ 254, empresas ≤ 160, orígenes/destinos ≤ 120
+--     y `eta` dentro del rango 2000-01-01..2100-12-31. Por eso el seed se aplica
+--     completo sobre el esquema endurecido.
 --   * `client_id` se resuelve por email en un subselect en vez de escribir
 --     uuids literales: el seed sobrevive a cualquier recambio de ids.
 --   * `make_interval(days => n)` en vez de `n || ' days'::interval`. Ambas

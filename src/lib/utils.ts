@@ -65,18 +65,28 @@ export function formatDateTime(value: string): string {
 }
 
 /**
- * Injection guard for user-supplied search terms interpolated into a PostgREST
- * `.or()` filter string. Strips the characters that would otherwise let a value
- * escape the `ilike.%term%` value and break out into another filter clause,
- * then collapses whitespace. Returns `""` when nothing survives, which callers
- * treat as "no search applied".
+ * Escapes a user-supplied value so it can be interpolated literally into a
+ * PostgREST `.or()` filter string (design decision D14).
+ *
+ * PostgREST treats `,`, `.`, `:`, `(`, `)` as reserved query grammar; a value
+ * that contains them unquoted is split into other clauses or rejected with a
+ * 400. The neutralisation is the surrounding double quotes: inside a quoted
+ * span PostgREST reads those characters as data, not syntax. Only two
+ * characters still need a backslash escape there — a bare `"` would close the
+ * span early and a bare `\` would begin an escape sequence — so the value is
+ * escaped as `\"` and `\\` (PostgREST's documented convention).
+ *
+ * The backslash is escaped FIRST, otherwise the escape added for `"` would
+ * itself be doubled. The result is a single quoted literal, e.g. `"Smith, John"`,
+ * ready to append after an operator: `name.ilike."%Smith, John%"`.
+ *
+ * `%`, `_` and `*` are NOT touched here: they are LIKE/ilike pattern wildcards
+ * (PostgREST maps `*` to `%`), not query grammar. The caller keeps the match to a
+ * literal substring by wrapping the term in `%`.
  */
-export function formatSearchTerm(raw: string): string {
-  return raw
-    .trim()
-    .replace(/[%*,()]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
+export function escapePostgrestValue(raw: string): string {
+  const escaped = raw.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+  return `"${escaped}"`
 }
 
 /**

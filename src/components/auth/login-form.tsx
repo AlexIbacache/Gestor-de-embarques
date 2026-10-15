@@ -12,7 +12,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function LoginForm() {
+/**
+ * `next` is the post-login destination preserved by the middleware in the login
+ * URL. It is carried to the action through a hidden field and validated
+ * server-side by `loginAction` (which rejects external or protocol-relative
+ * targets), so this component forwards it without inspecting it.
+ */
+export function LoginForm({ next }: { next?: string }) {
   const router = useRouter();
   const [state, formAction, isPending] = useActionState(loginAction, {
     error: null,
@@ -35,6 +41,8 @@ export function LoginForm() {
 
   return (
     <form action={formAction} className="grid gap-4">
+      <input type="hidden" name="next" defaultValue={next ?? ""} />
+
       {state.error ? (
         <Alert variant="destructive">
           <AlertCircle />

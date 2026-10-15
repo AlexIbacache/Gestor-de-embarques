@@ -32,7 +32,7 @@ import { createClient } from "@/lib/supabase/server";
 import { SHIPMENT_STATUS } from "@/lib/domain/shipments";
 import { formatDateTime } from "@/lib/utils";
 
-import type { ShipmentWithClient } from "@/types/database";
+import type { DashboardStats, ShipmentWithClient } from "@/types/database";
 
 /*
  * `.env.local` ships with empty Supabase credentials, so `createClient()`
@@ -43,6 +43,30 @@ import type { ShipmentWithClient } from "@/types/database";
 export const dynamic = "force-dynamic";
 
 const RECENT_SHIPMENT_LIMIT = 5;
+
+/** Used when the RPC returns `null` (e.g. an empty database edge response). */
+const EMPTY_STATS: DashboardStats = {
+  total: 0,
+  by_status: {},
+  by_modality: {},
+  monthly: [],
+};
+
+/**
+ * Dashboard error copy, keyed by the Postgres/PostgREST code. Same pattern as
+ * the Server Action maps (`src/app/actions/clientes.ts`): only the short code is
+ * inspected, never the raw message — Supabase errors are English, can name
+ * constraints and policies, and are never valid UI copy. Anything unmapped falls
+ * back to a generic sentence rather than leaking the technical text.
+ */
+const DASHBOARD_ERROR_MESSAGES: Record<string, string> = {
+  "42501": "No tenés autorización para ver las estadísticas.",
+  "42883": "La función de estadísticas todavía no está disponible.",
+  PGRST202: "La función de estadísticas todavía no está disponible.",
+};
+
+const DASHBOARD_ERROR_FALLBACK =
+  "No pudimos cargar el dashboard. Revisá tu conexión e intentá de nuevo.";
 
 export default function DashboardPage() {
   return (
@@ -63,115 +87,45 @@ async function DashboardContent() {
   const supabase = await createClient();
 
   /*
-   * All aggregates are executed in PostgreSQL through Supabase.
+   * One aggregation call plus the most recent shipments.
    *
-   * The three counts use `head: true`, so the actual rows do not
-   * cross the network.
-   *
-   * Status filters are applied directly in the database.
+   * `get_dashboard_stats()` groups by status, modality and month inside
+   * PostgreSQL and returns a single JSON value. It is `security invoker`, so the
+   * caller's RLS still applies — it does not bypass policies. No shipment rows
+   * are downloaded to be aggregated in JavaScript (design decision D16): the
+   * three charts and the KPIs all read this one payload.
    */
-  const [
-    { count: total, error: totalError },
-    { count: inTransit, error: inTransitError },
-    { count: delayed, error: delayedError },
-    { data: recent, error: recentError },
-    { data: statusData, error: statusError },
-    { data: modalityData, error: modalityError },
-    { data: timelineData, error: timelineError },
-  ] = await Promise.all([
-    supabase
-      .from("shipments")
-      .select("*", {
-        count: "exact",
-        head: true,
-      }),
+  const [statsResult, recentResult] = await Promise.all([
+    supabase.rpc("get_dashboard_stats"),
 
     supabase
       .from("shipments")
-      .select("*", {
-        count: "exact",
-        head: true,
-      })
-      // Named constant, not a positional index: reordering the array can never
-      // silently change which status this filter targets.
-      .eq("status", SHIPMENT_STATUS.IN_TRANSIT),
-
-    supabase
-      .from("shipments")
-      .select("*", {
-        count: "exact",
-        head: true,
-      })
-      .eq("status", SHIPMENT_STATUS.DELAYED),
-
-    supabase
-      .from("shipments")
-      .select(
-        "*, client:clients(id, name, company, email)"
-      )
-      .order("created_at", {
-        ascending: false,
-      })
+      .select("*, client:clients(id, name, company, email)")
+      .order("created_at", { ascending: false })
       .limit(RECENT_SHIPMENT_LIMIT),
-
-    supabase
-      .from("shipments")
-      .select("status"),
-
-    supabase
-      .from("shipments")
-      .select("modality"),
-
-    supabase
-      .from("shipments")
-      .select("created_at"),
   ]);
 
-  const firstError =
-    totalError ??
-    inTransitError ??
-    delayedError ??
-    recentError ??
-    statusError ??
-    modalityError ??
-    timelineError ??
-    null;
+  const firstError = statsResult.error ?? recentResult.error ?? null;
 
   /* =========================================================
      ERROR STATE
      ========================================================= */
 
   if (firstError) {
-    return (
-      <div className="min-h-full p-5 md:p-8">
-        <div className="mx-auto max-w-[1600px]">
-          <Alert variant="destructive">
-            <AlertCircle />
-
-            <AlertTitle>
-              No pudimos cargar el dashboard
-            </AlertTitle>
-
-            <AlertDescription>
-              {firstError.message}
-            </AlertDescription>
-
-            <AlertAction>
-              <Button
-                variant="outline"
-                size="sm"
-                render={<a href="/dashboard" />}
-              >
-                Reintentar
-              </Button>
-            </AlertAction>
-          </Alert>
-        </div>
-      </div>
-    );
+    return <DashboardErrorState code={firstError.code} />;
   }
 
-  const shipments = (recent ?? []) as ShipmentWithClient[];
+  // `createClient()` is built without the generated `Database` generic, so the
+  // RPC payload is typed `any`. Re-typed once, here, at the boundary.
+  const stats = (statsResult.data as DashboardStats | null) ?? EMPTY_STATS;
+
+  const shipments = (recentResult.data ?? []) as ShipmentWithClient[];
+
+  // The RPC supplies every counter; the KPIs read it instead of issuing extra
+  // `head: true` count queries.
+  const total = stats.total;
+  const inTransit = stats.by_status[SHIPMENT_STATUS.IN_TRANSIT] ?? 0;
+  const delayed = stats.by_status[SHIPMENT_STATUS.DELAYED] ?? 0;
 
   /* =========================================================
      DASHBOARD
@@ -202,21 +156,21 @@ async function DashboardContent() {
         <div className="grid gap-4 md:grid-cols-3">
           <StatCard
             label="Embarques totales"
-            value={total ?? 0}
+            value={total}
             icon={Package}
             iconColor="primary"
           />
 
           <StatCard
             label="En tránsito"
-            value={inTransit ?? 0}
+            value={inTransit}
             icon={Truck}
             iconColor="info"
           />
 
           <StatCard
             label="Retrasados"
-            value={delayed ?? 0}
+            value={delayed}
             icon={Clock}
             iconColor="danger"
           />
@@ -227,67 +181,16 @@ async function DashboardContent() {
             ===================================================== */}
 
         <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
-          <DashboardCharts
-            statusData={
-              (statusData ?? []) as {
-                status: string;
-              }[]
-            }
-            modalityData={
-              (modalityData ?? []) as {
-                modality: string;
-              }[]
-            }
-            timelineData={
-              (timelineData ?? []) as {
-                created_at: string;
-              }[]
-            }
-            mode="status"
-          />
+          <DashboardCharts stats={stats} mode="status" />
 
-          <DashboardCharts
-            statusData={
-              (statusData ?? []) as {
-                status: string;
-              }[]
-            }
-            modalityData={
-              (modalityData ?? []) as {
-                modality: string;
-              }[]
-            }
-            timelineData={
-              (timelineData ?? []) as {
-                created_at: string;
-              }[]
-            }
-            mode="modality"
-          />
+          <DashboardCharts stats={stats} mode="modality" />
         </div>
 
         {/* =====================================================
             TIMELINE
             ===================================================== */}
 
-        <DashboardCharts
-          statusData={
-            (statusData ?? []) as {
-              status: string;
-            }[]
-          }
-          modalityData={
-            (modalityData ?? []) as {
-              modality: string;
-            }[]
-          }
-          timelineData={
-            (timelineData ?? []) as {
-              created_at: string;
-            }[]
-          }
-          mode="timeline"
-        />
+        <DashboardCharts stats={stats} mode="timeline" />
 
         {/* =====================================================
             RECENT SHIPMENTS
@@ -375,6 +278,47 @@ async function DashboardContent() {
             )}
           </CardContent>
         </Card>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   ERROR STATE
+   ========================================================= */
+
+/**
+ * Renders a user-safe Spanish message, never the raw Supabase/PostgreSQL error.
+ * The technical `code` is inspected against {@link DASHBOARD_ERROR_MESSAGES};
+ * the mapped sentence is what the visitor reads. Retry is a full reload via a
+ * plain `<a>` (a Server Component cannot call `useRouter`), which also works
+ * without JavaScript.
+ */
+function DashboardErrorState({ code }: { code?: string }) {
+  const message =
+    (code ? DASHBOARD_ERROR_MESSAGES[code] : undefined) ??
+    DASHBOARD_ERROR_FALLBACK;
+
+  return (
+    <div className="min-h-full p-5 md:p-8">
+      <div className="mx-auto max-w-[1600px]">
+        <Alert variant="destructive">
+          <AlertCircle />
+
+          <AlertTitle>No pudimos cargar el dashboard</AlertTitle>
+
+          <AlertDescription>{message}</AlertDescription>
+
+          <AlertAction>
+            <Button
+              variant="outline"
+              size="sm"
+              render={<a href="/dashboard" />}
+            >
+              Reintentar
+            </Button>
+          </AlertAction>
+        </Alert>
       </div>
     </div>
   );

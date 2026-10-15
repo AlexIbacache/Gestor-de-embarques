@@ -26,7 +26,7 @@ import {
   parsePageSize,
   totalPagesFor,
 } from "@/lib/pagination";
-import { formatSearchTerm } from "@/lib/utils";
+import { escapePostgrestValue } from "@/lib/utils";
 import type {
   Client,
   ShipmentModality,
@@ -107,14 +107,14 @@ function parseOrder(raw: string | undefined): "asc" | "desc" {
 }
 
 /**
- * Sanitises `?search=` for PostgREST and returns `undefined` when nothing
- * survives. `formatSearchTerm` already strips the characters that could escape
- * the filter value; a term that reduces to `""` is treated as "no search", so
- * `ilike '%%'` is never sent — it would match every row and filter nothing.
+ * Normalises `?search=` and returns `undefined` when nothing survives. A term
+ * that reduces to `""` is treated as "no search", so `ilike '%%'` is never sent
+ * — it would match every row and filter nothing. The PostgREST grammar escaping
+ * happens later, in `escapePostgrestValue`, at the point of interpolation.
  */
 function parseSearch(raw: string | undefined): string | undefined {
-  const sanitized = formatSearchTerm(raw ?? "");
-  return sanitized ? sanitized : undefined;
+  const trimmed = (raw ?? "").trim();
+  return trimmed ? trimmed : undefined;
 }
 
 /**
@@ -267,12 +267,14 @@ async function ShipmentsResults({
   if (search) {
     // One `.or()` covers reference, origin and destination in a single request,
     // which is what the input placeholder promises. `.ilike("reference", ...)`
-    // alone would make the placeholder lie. `search` is already
-    // `formatSearchTerm`-sanitised, so `,` and the `%*,()` characters that would
-    // let a value break out of the filter clause are gone.
+    // alone would make the placeholder lie. The term is quoted for PostgREST by
+    // `escapePostgrestValue`, so a `,` (clause separator), `.`/`:` (operator
+    // separator) or `(`/`)`/`"`/`\` in the value can neither break the query nor
+    // open another clause; it is matched as literal text.
     const pattern = `%${search}%`;
+    const value = escapePostgrestValue(pattern);
     query = query.or(
-      `reference.ilike.${pattern},origin.ilike.${pattern},destination.ilike.${pattern}`,
+      `reference.ilike.${value},origin.ilike.${value},destination.ilike.${value}`,
     );
   }
 

@@ -15,27 +15,25 @@ function formatCompactMonthTick(value: string): string {
   return value.replace(/(\d{4})$/, (year) => year.slice(2));
 }
 
+/**
+ * `buckets` are the pre-aggregated monthly counts from
+ * `get_dashboard_stats()` — the server already grouped by
+ * `date_trunc('month', created_at)` and keyed each bucket `AAAA-MM`, so no
+ * aggregation happens here.
+ */
 export function ShipmentTimelineChart({
-  data,
+  buckets,
   compact = false,
 }: {
-  data: { created_at: string }[];
+  buckets: { month: string; count: number }[];
   compact?: boolean;
 }) {
-  const monthly = data.reduce(
-    (acc, d) => {
-      const month = d.created_at.slice(0, 7);
-      acc[month] = (acc[month] ?? 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
-
-  const chartData = Object.entries(monthly)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, count]) => ({
+  const chartData = [...buckets]
+    .sort((a, b) => a.month.localeCompare(b.month))
+    .map(({ month, count }) => ({
       // `month` is a `yyyy-mm` bucket key; parse `yyyy-mm-01` as a LOCAL calendar
-      // date so the label stays in the right month in negative UTC offsets.
+      // date so the label stays in the right month in negative UTC offsets
+      // (design decision D20).
       month: parseCalendarDate(`${month}-01`).toLocaleDateString("es", {
         month: "short",
         year: "numeric",

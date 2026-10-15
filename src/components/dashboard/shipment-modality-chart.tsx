@@ -14,20 +14,24 @@ function formatCountTick(value: number): string {
   return value >= 1000 ? `${value / 1000}k` : String(value);
 }
 
+/**
+ * `counts` is the pre-aggregated `by_modality` map from
+ * `get_dashboard_stats()`; the grouping already happened in PostgreSQL.
+ */
 export function ShipmentModalityChart({
-  data,
+  counts,
   compact = false,
 }: {
-  data: { modality: string }[];
+  counts: Record<string, number>;
   compact?: boolean;
 }) {
-  const counts = SHIPMENT_MODALITIES.map((modality) => ({
+  const data = SHIPMENT_MODALITIES.map((modality) => ({
     name: modality,
-    count: data.filter((d) => d.modality === modality).length,
+    count: counts[modality] ?? 0,
     fill: CHART_MODALITY_COLORS[modality],
   })).filter((d) => d.count > 0);
 
-  if (counts.length === 0) {
+  if (data.length === 0) {
     return (
       <div className="flex h-[240px] items-center justify-center text-sm text-muted-foreground">
         No hay datos para mostrar
@@ -38,7 +42,7 @@ export function ShipmentModalityChart({
   return (
     <ResponsiveContainer width="100%" height={compact ? 240 : 280}>
       <BarChart
-        data={counts}
+        data={data}
         layout="vertical"
         margin={{ top: 8, right: 16, bottom: 4, left: 0 }}
       >
@@ -68,7 +72,7 @@ export function ShipmentModalityChart({
           radius={[4, 4, 0, 0]}
           barSize={compact ? 28 : 40}
         >
-          {counts.map((entry) => (
+          {data.map((entry) => (
             <Cell key={entry.name} fill={entry.fill} />
           ))}
         </Bar>
