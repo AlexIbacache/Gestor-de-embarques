@@ -38,10 +38,10 @@
 
 ## 5. Layout y responsive
 
-- [ ] 5.1 Hacer la sidebar de desktop colapsable (rail de íconos ↔ expandida) con preferencia persistida en `localStorage` y sin flash en la carga inicial; verificar que el estado sobrevive a la recarga y que el rail muestra tooltips/etiquetas accesibles
-- [ ] 5.2 Exponer la búsqueda global en mobile con una superficie de input real (dialog/sheet) accionada desde la navegación móvil, reemplazando el ícono-enlace actual; verificar en viewport < 768px que se puede escribir un término y navegar a `/embarques?search=<término>`
-- [ ] 5.3 Ajustar los tres gráficos para que las etiquetas y ticks no se trunquen en anchos reducidos (densidad de ticks, altura mínima, estrategia de etiquetas); verificar a 360px, 768px y 1280px que ninguna etiqueta queda cortada ni superpuesta
-- [ ] 5.4 Verificación del grupo en los tres breakpoints (sidebar, búsqueda, gráficos, ausencia de overflow horizontal); commit como `feat(layout): ...` y `git log -1 --oneline`
+- [x] 5.1 Hacer la sidebar de desktop colapsable (rail de íconos ↔ expandida) con preferencia persistida en `localStorage` y sin flash en la carga inicial; verificar que el estado sobrevive a la recarga y que el rail muestra tooltips/etiquetas accesibles
+- [x] 5.2 Exponer la búsqueda global en mobile con una superficie de input real (dialog/sheet) accionada desde la navegación móvil, reemplazando el ícono-enlace actual; verificar en viewport < 768px que se puede escribir un término y navegar a `/embarques?search=<término>`
+- [x] 5.3 Ajustar los tres gráficos para que las etiquetas y ticks no se trunquen en anchos reducidos (densidad de ticks, altura mínima, estrategia de etiquetas); verificar a 360px, 768px y 1280px que ninguna etiqueta queda cortada ni superpuesta
+- [x] 5.4 Verificación del grupo en los tres breakpoints (sidebar, búsqueda, gráficos, ausencia de overflow horizontal); commit como `feat(layout): ...` y `git log -1 --oneline`
 
 ## 6. Endurecimiento del backend
 
