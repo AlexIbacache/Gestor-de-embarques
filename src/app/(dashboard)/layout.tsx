@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { AnimatedContent } from "@/components/layout/animated-content";
@@ -6,6 +7,10 @@ import { MobileNav } from "@/components/layout/mobile-nav";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import {
+  parseCollapsedPreference,
+  SIDEBAR_COLLAPSED_COOKIE,
+} from "@/lib/sidebar-preference";
 import { createClient } from "@/lib/supabase/server";
 
 // `.env.local` ships with empty Supabase credentials, so `createClient()` throws
@@ -53,11 +58,20 @@ export default async function DashboardLayout({ children }: LayoutProps<"/">) {
     name: resolveUserName(user.user_metadata, email),
   };
 
+  // The collapse preference lives in a cookie (not `localStorage`) precisely so
+  // it can be read HERE: the server renders the sidebar already in its final
+  // state, and the client's `useState(initialCollapsed)` starts from the same
+  // boolean, so there is no post-hydration correction and no flash on reload.
+  const cookieStore = await cookies();
+  const isSidebarCollapsed = parseCollapsedPreference(
+    cookieStore.get(SIDEBAR_COLLAPSED_COOKIE)?.value,
+  );
+
   return (
     <TooltipProvider>
       <Toaster />
       <div className="flex min-h-dvh flex-col bg-background md:flex-row">
-        <Sidebar user={userInfo} />
+        <Sidebar user={userInfo} initialCollapsed={isSidebarCollapsed} />
         {/* `min-w-0` is mandatory: without it the flex child sizes to its
             widest table and the whole page scrolls horizontally, which the
             layout spec forbids. */}

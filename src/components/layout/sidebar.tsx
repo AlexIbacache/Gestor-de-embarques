@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useSyncExternalStore, useTransition } from "react";
+import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -22,6 +22,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { serializeCollapsedPreference } from "@/lib/sidebar-preference";
 import { cn } from "@/lib/utils";
 
 /**
@@ -44,38 +45,6 @@ export type SidebarUser = {
   name: string;
 };
 
-const SIDEBAR_STORAGE_KEY = "sidebar-collapsed";
-
-/**
- * `storage` only fires in *other* tabs, so the current tab dispatches its own
- * event after writing the preference; both feed the same subscription.
- */
-const SIDEBAR_CHANGE_EVENT = "sidebar-collapse-change";
-
-function subscribeToCollapse(callback: () => void) {
-  window.addEventListener("storage", callback);
-  window.addEventListener(SIDEBAR_CHANGE_EVENT, callback);
-  return () => {
-    window.removeEventListener("storage", callback);
-    window.removeEventListener(SIDEBAR_CHANGE_EVENT, callback);
-  };
-}
-
-function getCollapsedSnapshot(): boolean {
-  return window.localStorage.getItem(SIDEBAR_STORAGE_KEY) === "true";
-}
-
-/**
- * `false` (expanded) on the server and during hydration, so the SSR markup is
- * stable and matches the client's first render; the stored preference is applied
- * on the post-hydration re-render. This is the same pattern as `ThemeToggle`:
- * `useSyncExternalStore` avoids a `useState` + `useEffect` pair, which the React
- * lint rules reject when the effect sets state synchronously.
- */
-function getCollapsedServerSnapshot(): boolean {
-  return false;
-}
-
 /**
  * Segment-boundary match, mirroring the middleware guard: `/dashboard-stats`
  * must not light up `/dashboard`.
@@ -84,20 +53,28 @@ function isActiveRoute(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function Sidebar({ user }: { user: SidebarUser }) {
+export function Sidebar({
+  user,
+  initialCollapsed,
+}: {
+  user: SidebarUser;
+  initialCollapsed: boolean;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const isCollapsed = useSyncExternalStore(
-    subscribeToCollapse,
-    getCollapsedSnapshot,
-    getCollapsedServerSnapshot,
-  );
+  // Seeded from the server-read cookie: the first client render is IDENTICAL to
+  // the SSR markup, so there is no hydration mismatch and no flash. The cookie
+  // is the source of truth; this state mirrors it for the current tree.
+  const [isCollapsed, setIsCollapsed] = useState(initialCollapsed);
 
   function handleToggleCollapsed() {
     const next = !isCollapsed;
-    window.localStorage.setItem(SIDEBAR_STORAGE_KEY, String(next));
-    window.dispatchEvent(new Event(SIDEBAR_CHANGE_EVENT));
+    setIsCollapsed(next);
+    // Not `httpOnly` by necessity: the client owns this write. `path=/` and a
+    // long `max-age` (see `serializeCollapsedPreference`) let the server read it
+    // on the next request and render the rail already collapsed.
+    document.cookie = serializeCollapsedPreference(next);
   }
 
   /**
