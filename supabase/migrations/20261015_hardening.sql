@@ -8,6 +8,10 @@
 -- producción/desarrollo existente al mismo estado sin recrear tablas.
 --
 -- CÓMO APLICAR
+--   REQUISITO: las tablas ya deben existir. Si la base es nueva, este NO es el
+--   archivo correcto: corré `supabase/schema.sql`, que crea tablas, constraints,
+--   RLS y la RPC de una vez. Este archivo solo lleva una base YA EXISTENTE al
+--   mismo estado, sin recrear tablas.
 --   Pegar este archivo en el SQL Editor de Supabase y ejecutarlo una vez.
 --   Correrlo como el rol `postgres` (o cualquier rol dueño), igual que el seed,
 --   porque crear constraints y funciones altera el catálogo.
@@ -44,6 +48,25 @@
 --   alter table public.shipments drop constraint if exists shipments_eta_range_check;
 --   drop function if exists public.get_dashboard_stats();
 -- =============================================================================
+
+-- -----------------------------------------------------------------------------
+-- 0. Preflight — este script asume que las tablas YA existen
+-- -----------------------------------------------------------------------------
+-- `'public.shipments'::regclass` LANZA 42P01 ("la relación public.shipments no
+-- existe") cuando la tabla no está: el cast se evalúa ANTES de que el
+-- `if not exists` pueda hacer algo, así que el guard no protege de una base
+-- vacía. `to_regclass` devuelve NULL en vez de lanzar, y con eso el script puede
+-- decir QUÉ hacer en lugar de morir con un error de catálogo.
+-- -----------------------------------------------------------------------------
+
+do $$
+begin
+  if to_regclass('public.clients') is null
+     or to_regclass('public.shipments') is null then
+    raise exception
+      'Falta public.clients o public.shipments: esta base no tiene el esquema base. Este script es solo para bases YA EXISTENTES. Ejecutá primero supabase/schema.sql (crea tablas, constraints, RLS y la RPC) y después volvé a correr este archivo únicamente si la base ya existía sin los constraints.';
+  end if;
+end $$;
 
 -- -----------------------------------------------------------------------------
 -- 1. CHECK de dominio de embarques (decisión D17)
