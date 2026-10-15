@@ -4,14 +4,9 @@ import { type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import type { SidebarUser } from "@/components/layout/sidebar";
+import { SEARCH_PATH } from "@/components/layout/search-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Input } from "@/components/ui/input";
-
-/**
- * `/embarques` is the only list wired to server-side search (`?search=`), so
- * the quick search always lands there rather than guessing the current section.
- */
-const SEARCH_PATH = "/embarques";
 
 /**
  * Navigational only: it owns no search state and filters nothing locally. The
@@ -24,7 +19,7 @@ const SEARCH_PATH = "/embarques";
  *
  * Desktop only. The header itself is `hidden md:flex`, so this input never
  * renders below `md`; small viewports reach search through the `MobileNav`
- * shortcut to `/embarques`, which owns its own filter field.
+ * search dialog, which submits to the same `SEARCH_PATH` and owns its own input.
  */
 function QuickSearch() {
   const router = useRouter();

@@ -1,11 +1,47 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import dynamic from "next/dynamic";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FadeIn } from "@/components/ui/motion";
 import { HoverElevation } from "@/components/ui/hover-elevation";
 import { Skeleton } from "@/components/ui/skeleton";
+
+/**
+ * Matches Tailwind's `sm` boundary: below it the dashboard is a single narrow
+ * column and the charts must switch to their label-light strategies.
+ */
+const NARROW_VIEWPORT_QUERY = "(max-width: 639px)";
+
+function subscribeToViewport(callback: () => void) {
+  const media = window.matchMedia(NARROW_VIEWPORT_QUERY);
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+
+function getNarrowViewportSnapshot(): boolean {
+  return window.matchMedia(NARROW_VIEWPORT_QUERY).matches;
+}
+
+/**
+ * `false` on the server and first client render: the charts themselves load
+ * with `ssr: false`, so this only decides the post-hydration strategy and never
+ * causes a mismatch. `useSyncExternalStore` is used instead of `useState` +
+ * `useEffect` because setting state synchronously in an effect is disallowed by
+ * the React lint rules.
+ */
+function getNarrowViewportServerSnapshot(): boolean {
+  return false;
+}
+
+function useIsNarrowViewport(): boolean {
+  return useSyncExternalStore(
+    subscribeToViewport,
+    getNarrowViewportSnapshot,
+    getNarrowViewportServerSnapshot,
+  );
+}
 
 /**
  * Recharts is a heavy client-only dependency. Loading it eagerly would put it in
@@ -91,6 +127,8 @@ export function DashboardCharts({
   timelineData: { created_at: string }[];
   mode?: "all" | "status" | "timeline" | "modality";
 }) {
+  const isNarrow = useIsNarrowViewport();
+
   /*
    * ---------------------------------------------------------
    * STATUS
@@ -103,7 +141,7 @@ export function DashboardCharts({
         title="Embarques por estado"
         description="Distribución actual según el estado"
       >
-        <div className="min-h-[280px]">
+        <div className="min-h-[280px] min-w-0">
           <ShipmentStatusChart data={statusData} />
         </div>
       </ChartCard>
@@ -122,8 +160,8 @@ export function DashboardCharts({
         title="Embarques en el tiempo"
         description="Evolución de los embarques registrados"
       >
-        <div className="min-h-[280px]">
-          <ShipmentTimelineChart data={timelineData} />
+        <div className="min-h-[280px] min-w-0">
+          <ShipmentTimelineChart data={timelineData} compact={isNarrow} />
         </div>
       </ChartCard>
     );
@@ -141,8 +179,8 @@ export function DashboardCharts({
         title="Embarques por modalidad"
         description="Distribución según tipo de transporte"
       >
-        <div className="min-h-[280px]">
-          <ShipmentModalityChart data={modalityData} />
+        <div className="min-h-[280px] min-w-0">
+          <ShipmentModalityChart data={modalityData} compact={isNarrow} />
         </div>
       </ChartCard>
     );
@@ -160,7 +198,7 @@ export function DashboardCharts({
         title="Embarques por estado"
         description="Distribución actual según el estado"
       >
-        <div className="min-h-[280px]">
+        <div className="min-h-[280px] min-w-0">
           <ShipmentStatusChart data={statusData} />
         </div>
       </ChartCard>
@@ -169,8 +207,8 @@ export function DashboardCharts({
         title="Embarques por modalidad"
         description="Distribución según tipo de transporte"
       >
-        <div className="min-h-[280px]">
-          <ShipmentModalityChart data={modalityData} />
+        <div className="min-h-[280px] min-w-0">
+          <ShipmentModalityChart data={modalityData} compact={isNarrow} />
         </div>
       </ChartCard>
 
@@ -179,8 +217,8 @@ export function DashboardCharts({
         description="Evolución de los embarques registrados"
         className="lg:col-span-2"
       >
-        <div className="min-h-[280px]">
-          <ShipmentTimelineChart data={timelineData} />
+        <div className="min-h-[280px] min-w-0">
+          <ShipmentTimelineChart data={timelineData} compact={isNarrow} />
         </div>
       </ChartCard>
     </div>

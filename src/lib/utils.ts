@@ -78,3 +78,49 @@ export function formatSearchTerm(raw: string): string {
     .replace(/\s+/g, " ")
     .trim()
 }
+
+/**
+ * Validates a strict `YYYY-MM-DD` calendar date and returns it unchanged, or
+ * `undefined` for anything else (wrong shape, impossible day, empty). Used by
+ * the clients `from` / `to` filters.
+ *
+ * The round-trip check (`toISOString()` must reproduce the input) rejects days
+ * that JavaScript would otherwise roll over silently: `2026-02-30` parses to
+ * March 2, so it is refused rather than quietly filtering on the wrong day.
+ */
+export function parseCalendarDateParam(
+  raw: string | undefined,
+): string | undefined {
+  if (!raw || !/^\d{4}-\d{2}-\d{2}$/.test(raw)) return undefined;
+  const date = new Date(`${raw}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) return undefined;
+  return date.toISOString().slice(0, 10) === raw ? raw : undefined;
+}
+
+/**
+ * The UTC instant that starts the day AFTER `calendarDate` (`YYYY-MM-DD`),
+ * ISO-8601. This is the exclusive upper bound of the clients date filter.
+ *
+ * Date strategy (design decision D20): `clients.created_at` is a `timestamptz`
+ * INSTANT, while `from` / `to` are civil CALENDAR dates with no timezone. A
+ * boundary has to be chosen, and this app does not invent the user's timezone:
+ * the day boundaries are UTC. The range is half-open — `created_at >=
+ * fromT00:00Z` and `created_at < (to + 1 day)T00:00Z` — so the whole `to` day is
+ * included without an inclusive-end rounding error. Consequence: a row created
+ * at `2026-06-30 22:00` in UTC-3 is `2026-07-01 01:00Z` and is excluded by
+ * `to=2026-06-30`.
+ */
+export function startOfNextUtcDay(calendarDate: string): string {
+  const date = new Date(`${calendarDate}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + 1);
+  return date.toISOString();
+}
+
+/**
+ * The inclusive UTC lower bound for a calendar date, ISO-8601: midnight UTC of
+ * that day. The counterpart of {@link startOfNextUtcDay} for the clients
+ * `created_at` filter.
+ */
+export function startOfUtcDay(calendarDate: string): string {
+  return new Date(`${calendarDate}T00:00:00.000Z`).toISOString();
+}

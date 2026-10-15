@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LogOut, Menu, Search } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
 import { toast } from "sonner";
 
 import { logoutAction } from "@/app/actions/auth";
 import { NAV_ITEMS, type SidebarUser } from "@/components/layout/sidebar";
+import { SearchDialog } from "@/components/layout/search-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -152,17 +153,9 @@ export function MobileNav({ user }: { user: SidebarUser }) {
         Gestor de Embarques
       </span>
 
-      {/* Search lives on the shipments list, so the shortcut targets it rather
-          than duplicating the input here. */}
-      <Button
-        variant="ghost"
-        size="icon-lg"
-        aria-label="Buscar embarques"
-        className="ml-auto"
-        render={<Link href="/embarques" />}
-      >
-        <Search className="size-5" aria-hidden="true" />
-      </Button>
+      {/* Real search surface, not a link: the dialog opens a text input and
+          submits the term to the same destination the desktop header uses. */}
+      <SearchDialog className="ml-auto" />
     </div>
   );
 }

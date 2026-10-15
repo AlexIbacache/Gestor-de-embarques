@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Pencil, Trash2 } from "lucide-react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
 
 import { deleteShipmentAction } from "@/app/actions/embarques";
 import { DeleteShipmentDialog } from "@/components/embarques/delete-shipment-dialog";
@@ -35,13 +35,63 @@ type ShipmentTableProps = {
   clients: Client[];
   /**
    * Accepted for symmetry with the server page but deliberately not read here:
-   * the pagination controls are `next/link` hrefs only the Server Component can
-   * build, because they must be derived from the raw `searchParams` object.
+   * the pagination controls are a Client Component that reads the URL itself.
    */
   page: number;
   totalPages: number;
   totalCount: number;
 };
+
+/** Kept in sync with the `SORTABLE_COLUMNS` allowlist in `embarques/page.tsx`. */
+const EMBARQUES_PATH = "/embarques";
+
+/**
+ * Mirrors the `SORTABLE_COLUMNS` allowlist in
+ * `src/app/(dashboard)/embarques/page.tsx`.
+ *
+ * Duplicated rather than imported because the allowlist lives in a Server
+ * Component module: importing it from here would pull `createClient()` (and the
+ * `cookies()` import chain) into the browser bundle. The server copy stays the
+ * authority — it is what actually rejects an unknown `?sort=` value — this one
+ * only decides which headers render as links.
+ *
+ * `client_id` is the one entry whose label and column differ: the server can
+ * only order by the foreign key, never the joined company name, so "Cliente"
+ * sorts by that key rather than alphabetically by name.
+ */
+const SORTABLE_COLUMNS = [
+  { key: "reference", label: "Referencia" },
+  { key: "client_id", label: "Cliente" },
+  { key: "origin", label: "Origen" },
+  { key: "destination", label: "Destino" },
+  { key: "modality", label: "Modalidad" },
+  { key: "status", label: "Estado" },
+  { key: "eta", label: "ETA" },
+  { key: "created_at", label: "Creado" },
+] as const;
+
+type SortableColumn = (typeof SORTABLE_COLUMNS)[number]["key"];
+
+/**
+ * Builds the href for a sort toggle, mirroring `client-table.tsx`.
+ *
+ * Every current param is copied first, so the active search and filters survive
+ * the sort change, and `page` is dropped because a new ordering invalidates the
+ * current offset — otherwise the user lands on page 4 of a result set that only
+ * has one page and sees an empty table.
+ */
+function buildSortHref(current: URLSearchParams, column: SortableColumn): string {
+  const next = new URLSearchParams(current.toString());
+  const isActiveColumn = current.get("sort") === column;
+  // Same column toggles the direction, a different column starts ascending.
+  const nextOrder = isActiveColumn && current.get("order") === "asc" ? "desc" : "asc";
+
+  next.set("sort", column);
+  next.set("order", nextOrder);
+  next.delete("page");
+
+  return `${EMBARQUES_PATH}?${next.toString()}`;
+}
 
 /** WU-9 detail route. It does not exist yet; the link is wired in advance. */
 function shipmentHref(id: string): string {
@@ -65,9 +115,10 @@ function clientLabel(shipment: ShipmentWithClient): string {
  * real `<table>` from `lg` up, and one `Card` per shipment below it. Both read
  * from the same `shipments` prop, so the two views cannot disagree.
  *
- * Headers are inert. `client-table.tsx` links them to `?sort=&order=` because the
- * clients page resolves that allowlist server-side; the shipments page does not
- * read those params yet, so a link here would 404-free but silently unsorted.
+ * The desktop headers are sort links, in parity with `client-table.tsx`: they
+ * write `?sort=<field>&order=<asc|desc>` and the active field shows a direction
+ * arrow. Sorting is read from the URL, never from local state, because the
+ * Server Component re-runs the query on navigation.
  */
 export function ShipmentTable({
   shipments,
@@ -75,6 +126,9 @@ export function ShipmentTable({
   totalCount,
 }: ShipmentTableProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const activeSort = searchParams.get("sort");
+  const activeOrder = searchParams.get("order");
 
   const [editingShipment, setEditingShipment] = useState<Shipment | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -133,14 +187,32 @@ export function ShipmentTable({
               <Table className="min-w-[980px]">
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Referencia</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Origen</TableHead>
-                    <TableHead>Destino</TableHead>
-                    <TableHead>Modalidad</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>ETA</TableHead>
-                    <TableHead>Creado</TableHead>
+                    {SORTABLE_COLUMNS.map((column) => {
+                      const isActive = activeSort === column.key;
+                      const ariaSort = isActive
+                        ? activeOrder === "desc"
+                          ? "descending"
+                          : "ascending"
+                        : "none";
+
+                      return (
+                        <TableHead key={column.key} aria-sort={ariaSort}>
+                          <Link
+                            href={buildSortHref(searchParams, column.key)}
+                            className="inline-flex items-center gap-1 rounded-sm outline-none hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                          >
+                            {column.label}
+                            {isActive ? (
+                              activeOrder === "desc" ? (
+                                <ArrowDown className="size-3.5" aria-hidden="true" />
+                              ) : (
+                                <ArrowUp className="size-3.5" aria-hidden="true" />
+                              )
+                            ) : null}
+                          </Link>
+                        </TableHead>
+                      );
+                    })}
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>

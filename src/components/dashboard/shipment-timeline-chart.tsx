@@ -6,7 +6,22 @@ import React from "react";
 import { CHART_PRIMARY_COLOR } from "@/components/dashboard/chart-colors";
 import { parseCalendarDate } from "@/lib/utils";
 
-export function ShipmentTimelineChart({ data }: { data: { created_at: string }[] }) {
+/**
+ * `oct 2026` -> `oct 26`. With many month buckets on a narrow chart, dropping
+ * the century keeps each tick short enough that `preserveStartEnd` can space
+ * the surviving labels without overlap.
+ */
+function formatCompactMonthTick(value: string): string {
+  return value.replace(/(\d{4})$/, (year) => year.slice(2));
+}
+
+export function ShipmentTimelineChart({
+  data,
+  compact = false,
+}: {
+  data: { created_at: string }[];
+  compact?: boolean;
+}) {
   const monthly = data.reduce(
     (acc, d) => {
       const month = d.created_at.slice(0, 7);
@@ -48,15 +63,34 @@ export function ShipmentTimelineChart({ data }: { data: { created_at: string }[]
   );
 
   return (
-    <ResponsiveContainer width="100%" height={280}>
+    <ResponsiveContainer width="100%" height={compact ? 240 : 280}>
       <AreaChart
         data={chartData}
-        margin={{ top: 10, right: 10, bottom: 0, left: 0 }}
+        margin={{ top: 10, right: compact ? 16 : 10, bottom: 0, left: 0 }}
         // @ts-expect-error - defs is supported by Recharts but not in TypeScript types
         defs={defs}
       >
-        <XAxis dataKey="month" axisLine={false} tickLine={false} tickMargin={8} tick={{ fill: "var(--muted-foreground)" }} />
-        <YAxis allowDecimals={false} axisLine={false} tickLine={false} tick={{ fill: "var(--muted-foreground)" }} />
+        {/* Density adapts at every width: `preserveStartEnd` keeps the edges and
+            drops any interior tick that would violate `minTickGap`, so this is
+            safe at 360px (edge labels only), 768px (sidebar shrinks the card to
+            ~400px) and 1280px (every bucket fits and is shown). The compact
+            formatter additionally shortens `oct 2026` to `oct 26`. */}
+        <XAxis
+          dataKey="month"
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
+          interval="preserveStartEnd"
+          minTickGap={compact ? 24 : 16}
+          tickFormatter={compact ? formatCompactMonthTick : undefined}
+          tick={{ fill: "var(--muted-foreground)" }}
+        />
+        <YAxis
+          allowDecimals={false}
+          axisLine={false}
+          tickLine={false}
+          tick={{ fill: "var(--muted-foreground)" }}
+        />
         <Area
           type="monotone"
           dataKey="count"

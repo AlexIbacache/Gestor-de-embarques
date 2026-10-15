@@ -28,13 +28,13 @@
 
 ## 4. Tablas: paginación, filtros y ordenamiento
 
-- [ ] 4.1 Crear el componente compartido de paginación (`src/components/ui/pagination-data.tsx` o similar) con páginas numeradas, elipsis cuando hay más de ~7 páginas, anterior/siguiente y selector de tamaño 10/25/50; verificar renderizándolo con datos de prueba que la numeración y la elipsis son correctas en 1, 5 y 40 páginas
-- [ ] 4.2 Implementar el clamp server-side: si `page` parseado excede el total de páginas, redirigir a la última página válida; verificar en `/clientes?page=999` que la URL y el listado terminan en la última página en lugar de renderizar vacío
-- [ ] 4.3 Integrar el componente en `/clientes` reemplazando la paginación anterior y respetando `pageSize` en la query Supabase; verificar que `?pageSize=25` lista 25 registros y que cambiar el tamaño vuelve a `page=1`
-- [ ] 4.4 Integrar el componente y el clamp en `/embarques` con las mismas verificaciones que 4.2 y 4.3
-- [ ] 4.5 Agregar el filtro por rango de fecha de creación en clientes (`from`/`to` en URL, formato AAAA-MM-DD, combinado con búsqueda/orden/paginación); verificar que `?from=2026-01-01&to=2026-06-30` filtra correctamente y que los parámetros sobreviven al paginar y ordenar
-- [ ] 4.6 Convertir los encabezados inertes de la tabla de embarques en enlaces de ordenamiento (referencia, cliente, origen, destino, estado, ETA, fecha de creación) con indicador visual de campo y dirección activos; verificar paridad de comportamiento con clientes (`?sort=<campo>&order=<asc|desc>`) y retirar el comentario que admitía la limitación
-- [ ] 4.7 Verificación del grupo: `pnpm build` y `pnpm lint` limpios; recorrido manual de paginación/tamaño/clamp/filtro/orden en ambos listados; commit como `feat(tables): ...`
+- [x] 4.1 Crear el componente compartido de paginación (`src/components/ui/pagination-data.tsx` o similar) con páginas numeradas, elipsis cuando hay más de ~7 páginas, anterior/siguiente y selector de tamaño 10/25/50; verificar renderizándolo con datos de prueba que la numeración y la elipsis son correctas en 1, 5 y 40 páginas
+- [x] 4.2 Implementar el clamp server-side: si `page` parseado excede el total de páginas, redirigir a la última página válida; verificar en `/clientes?page=999` que la URL y el listado terminan en la última página en lugar de renderizar vacío
+- [x] 4.3 Integrar el componente en `/clientes` reemplazando la paginación anterior y respetando `pageSize` en la query Supabase; verificar que `?pageSize=25` lista 25 registros y que cambiar el tamaño vuelve a `page=1`
+- [x] 4.4 Integrar el componente y el clamp en `/embarques` con las mismas verificaciones que 4.2 y 4.3
+- [x] 4.5 Agregar el filtro por rango de fecha de creación en clientes (`from`/`to` en URL, formato AAAA-MM-DD, combinado con búsqueda/orden/paginación); verificar que `?from=2026-01-01&to=2026-06-30` filtra correctamente y que los parámetros sobreviven al paginar y ordenar
+- [x] 4.6 Convertir los encabezados inertes de la tabla de embarques en enlaces de ordenamiento (referencia, cliente, origen, destino, estado, ETA, fecha de creación) con indicador visual de campo y dirección activos; verificar paridad de comportamiento con clientes (`?sort=<campo>&order=<asc|desc>`) y retirar el comentario que admitía la limitación
+- [x] 4.7 Verificación del grupo: `pnpm build` y `pnpm lint` limpios; recorrido manual de paginación/tamaño/clamp/filtro/orden en ambos listados; commit como `feat(tables): ...`
 
 ## 5. Layout y responsive
 

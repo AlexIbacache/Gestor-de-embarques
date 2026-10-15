@@ -6,15 +6,21 @@ import { Search, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 const DEBOUNCE_MS = 350;
 
 /**
- * Search box for the clients list.
+ * Filter bar for the clients list: a free-text search plus a creation-date
+ * range. The controls are facets of one query, so the URL is the only state —
+ * nothing is fetched or filtered here.
  *
- * The input owns its own text; the URL owns the result set. Keystrokes update
- * the input immediately and reach the URL after `DEBOUNCE_MS`, so the server is
- * not asked to re-render the list once per character.
+ * The text input owns its own text (so it stays responsive while the server
+ * round-trips) and reaches the URL after `DEBOUNCE_MS`. The two `type="date"`
+ * inputs are discrete choices and write immediately. The date boundaries are
+ * civil `YYYY-MM-DD` values, exactly what a native date input produces, and the
+ * server interprets them as UTC day boundaries for `created_at` (see
+ * `startOfUtcDay` / `startOfNextUtcDay` in `src/lib/utils.ts`).
  */
 export function ClientFilters() {
   const router = useRouter();
@@ -25,6 +31,8 @@ export function ClientFilters() {
   // render would let the server response overwrite whatever the user has typed
   // in the meantime; the URL is only the *starting* value here.
   const [term, setTerm] = useState(() => searchParams.get("search") ?? "");
+  const [from, setFrom] = useState(() => searchParams.get("from") ?? "");
+  const [to, setTo] = useState(() => searchParams.get("to") ?? "");
 
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -36,25 +44,47 @@ export function ClientFilters() {
     };
   }, []);
 
+  /**
+   * The single source of truth for the pending debounce, for the same reason as
+   * `ShipmentFilters`: a date change landing first would otherwise let the
+   * search timer fire afterwards and resurrect the pre-date URL.
+   */
+  function cancelPendingSearch() {
+    if (timeoutRef.current !== null) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }
+
+  /**
+   * Every navigation goes through here, so the params this component does not
+   * own (`sort`, `order`, `pageSize`) are never dropped. A narrower result set
+   * invalidates the current offset, so `page` is removed rather than set to 1:
+   * page 4 of the previous filter can be past the end of the new one, and the
+   * clean first page keeps the URL shareable.
+   */
+  function writeParams(next: URLSearchParams) {
+    next.delete("page");
+
+    const query = next.toString();
+    const href = query ? `${pathname}?${query}` : pathname;
+
+    // `replace`, not `push`: a history entry per filter change would make the
+    // user press Back once per click to leave the page. `scroll: false`: the
+    // default scrolls to the top and yanks the viewport mid-typing.
+    router.replace(href, { scroll: false });
+  }
+
   function applySearch(value: string) {
-    // Every other param (`sort`, `order`) is copied so a search does not throw
-    // away the current ordering.
+    // Every other param is copied so a search does not throw away the current
+    // ordering, page size or date range.
     const next = new URLSearchParams(searchParams.toString());
     const trimmed = value.trim();
 
     if (trimmed) next.set("search", trimmed);
     else next.delete("search");
 
-    // A narrower result set invalidates the current offset.
-    next.delete("page");
-
-    const query = next.toString();
-    const href = query ? `${pathname}?${query}` : pathname;
-
-    // `replace`, not `push`: one history entry per debounce window would make
-    // the user press Back once per search to leave the page. `scroll: false`:
-    // the default scrolls to the top, which yanks the viewport mid-typing.
-    router.replace(href, { scroll: false });
+    writeParams(next);
   }
 
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
@@ -65,21 +95,72 @@ export function ClientFilters() {
     timeoutRef.current = setTimeout(() => applySearch(value), DEBOUNCE_MS);
   }
 
+  /**
+   * A date changed, so it writes immediately — the choice is discrete and there
+   * is nothing to wait for. The pending search is cancelled first so it cannot
+   * fire after this write, and the current text is folded into *this*
+   * navigation rather than discarded: dropping it would leave the input showing
+   * a term the URL no longer carries.
+   */
+  function applyDate(name: "from" | "to", value: string) {
+    cancelPendingSearch();
+
+    const next = new URLSearchParams(searchParams.toString());
+
+    if (value) next.set(name, value);
+    else next.delete(name);
+
+    const trimmed = term.trim();
+    if (trimmed) next.set("search", trimmed);
+    else next.delete("search");
+
+    writeParams(next);
+  }
+
+  function handleFromChange(event: ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+    setFrom(value);
+    applyDate("from", value);
+  }
+
+  function handleToChange(event: ChangeEvent<HTMLInputElement>) {
+    const value = event.target.value;
+    setTo(value);
+    applyDate("to", value);
+  }
+
   function handleClear() {
     // Cancel the pending debounce first, otherwise a term typed before the
     // click would be applied right after the clear.
-    if (timeoutRef.current !== null) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
+    cancelPendingSearch();
 
     setTerm("");
     applySearch("");
   }
 
+  function handleClearAll() {
+    cancelPendingSearch();
+
+    setTerm("");
+    setFrom("");
+    setTo("");
+
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("search");
+    next.delete("from");
+    next.delete("to");
+
+    writeParams(next);
+  }
+
+  const hasActiveFilters = term.trim().length > 0 || from !== "" || to !== "";
+
   return (
-    <div role="search">
-      <div className="relative max-w-md">
+    <div
+      role="search"
+      className="flex flex-col gap-3 lg:flex-row lg:items-center"
+    >
+      <div className="relative flex-1 lg:max-w-md">
         <Search
           className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
           aria-hidden="true"
@@ -108,6 +189,55 @@ export function ClientFilters() {
           </Button>
         ) : null}
       </div>
+
+      {/* Native `type="date"` inputs: the value is already `YYYY-MM-DD`, which
+          is exactly the URL format, so no parsing is needed on either side. */}
+      <div className="flex items-end gap-3">
+        <div className="space-y-1">
+          <Label
+            htmlFor="client-filters-from"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            Desde
+          </Label>
+          <Input
+            id="client-filters-from"
+            type="date"
+            value={from}
+            max={to || undefined}
+            onChange={handleFromChange}
+            className="w-[160px]"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label
+            htmlFor="client-filters-to"
+            className="text-xs font-normal text-muted-foreground"
+          >
+            Hasta
+          </Label>
+          <Input
+            id="client-filters-to"
+            type="date"
+            value={to}
+            min={from || undefined}
+            onChange={handleToChange}
+            className="w-[160px]"
+          />
+        </div>
+      </div>
+
+      {/* Only rendered when a filter is on, so the bar does not carry a button
+          that would do nothing. */}
+      {hasActiveFilters ? (
+        <Button
+          variant="outline"
+          onClick={handleClearAll}
+          className="self-start lg:self-center"
+        >
+          Limpiar filtros
+        </Button>
+      ) : null}
     </div>
   );
 }
