@@ -95,6 +95,11 @@ export function ShipmentTable({
     // popup and cut the exit animation short. The next open always sets it first.
   }
 
+  function handleDeleteRequest(shipment: ShipmentWithClient) {
+    setDeletingShipment(shipment);
+    setIsDeleteDialogOpen(true);
+  }
+
   async function handleConfirmDelete(id: string) {
     const result = await deleteShipmentAction({ id });
 
@@ -190,7 +195,7 @@ export function ShipmentTable({
                         <RowActions
                           shipment={shipment}
                           onEdit={handleEdit}
-                          onDelete={setDeletingShipment}
+                          onDelete={handleDeleteRequest}
                         />
                       </TableCell>
                     </FadeInTableRow>
@@ -250,7 +255,7 @@ export function ShipmentTable({
                   <RowActions
                     shipment={shipment}
                     onEdit={handleEdit}
-                    onDelete={setDeletingShipment}
+                    onDelete={handleDeleteRequest}
                   />
                 </div>
               </div>
