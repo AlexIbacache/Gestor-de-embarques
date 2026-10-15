@@ -2,19 +2,16 @@
 
 import { Bar, BarChart, Cell, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
-const MODALITIES = ["FCL", "LCL", "AIR"] as const;
+import { CHART_MODALITY_COLORS } from "@/components/dashboard/chart-colors";
+import type { ShipmentModality } from "@/types/database";
 
-const MODALITY_COLORS: Record<(typeof MODALITIES)[number], string> = {
-  FCL: "var(--color-success)",
-  LCL: "var(--color-warning)",
-  AIR: "var(--color-primary)",
-};
+const MODALITIES: ShipmentModality[] = ["FCL", "LCL", "AIR"];
 
 export function ShipmentModalityChart({ data }: { data: { modality: string }[] }) {
   const counts = MODALITIES.map((modality) => ({
     name: modality,
     count: data.filter((d) => d.modality === modality).length,
-    fill: MODALITY_COLORS[modality],
+    fill: CHART_MODALITY_COLORS[modality],
   })).filter((d) => d.count > 0);
 
   if (counts.length === 0) {

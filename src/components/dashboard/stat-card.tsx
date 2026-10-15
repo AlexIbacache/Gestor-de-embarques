@@ -3,7 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { StatCardMotion } from "@/components/dashboard/stat-card-motion";
 import { Card, CardContent } from "@/components/ui/card";
 
-type IconColor = "lime" | "amber" | "red" | "blue" | "primary";
+type IconColor = "primary" | "info" | "success" | "warning" | "danger";
 
 const ICON_COLOR_CLASSES: Record<
   IconColor,
@@ -13,34 +13,34 @@ const ICON_COLOR_CLASSES: Record<
     accent: string;
   }
 > = {
-  lime: {
-    container: "bg-[#ECF8C9]",
-    icon: "text-[#84B82A]",
-    accent: "bg-[#A8D44A]",
-  },
-
-  amber: {
-    container: "bg-[#FFF1CF]",
-    icon: "text-[#D89225]",
-    accent: "bg-[#E9B04B]",
-  },
-
-  red: {
-    container: "bg-[#FDE2E2]",
-    icon: "text-[#E64646]",
-    accent: "bg-[#EF4444]",
-  },
-
-  blue: {
-    container: "bg-[#E3EFFA]",
-    icon: "text-[#4C87B9]",
-    accent: "bg-[#70A9D6]",
-  },
-
   primary: {
     container: "bg-primary/10",
     icon: "text-primary",
     accent: "bg-primary",
+  },
+
+  info: {
+    container: "bg-chart-2/15",
+    icon: "text-chart-2",
+    accent: "bg-chart-2",
+  },
+
+  success: {
+    container: "bg-success/15",
+    icon: "text-success",
+    accent: "bg-success",
+  },
+
+  warning: {
+    container: "bg-warning/15",
+    icon: "text-warning",
+    accent: "bg-warning",
+  },
+
+  danger: {
+    container: "bg-danger/15",
+    icon: "text-danger",
+    accent: "bg-danger",
   },
 };
 
@@ -67,7 +67,7 @@ export function StatCard({
           rounded-2xl
           border
           border-black/[0.045]
-          bg-white
+          bg-card
           shadow-[0_2px_10px_rgba(0,0,0,0.025)]
           transition-all
           duration-200

@@ -3,6 +3,8 @@
 import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 import React from "react";
 
+import { CHART_PRIMARY_COLOR } from "@/components/dashboard/chart-colors";
+
 export function ShipmentTimelineChart({ data }: { data: { created_at: string }[] }) {
   const monthly = data.reduce(
     (acc, d) => {
@@ -36,8 +38,8 @@ export function ShipmentTimelineChart({ data }: { data: { created_at: string }[]
   const defs = (
     <defs>
       <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor="var(--color-success)" stopOpacity={0.3} />
-        <stop offset="100%" stopColor="var(--color-success)" stopOpacity={0} />
+        <stop offset="0%" stopColor={CHART_PRIMARY_COLOR} stopOpacity={0.3} />
+        <stop offset="100%" stopColor={CHART_PRIMARY_COLOR} stopOpacity={0} />
       </linearGradient>
     </defs>
   );
@@ -56,7 +58,7 @@ export function ShipmentTimelineChart({ data }: { data: { created_at: string }[]
           type="monotone"
           dataKey="count"
           name="Embarques"
-          stroke="var(--color-success)"
+          stroke={CHART_PRIMARY_COLOR}
           fill={`url(#${gradientId})`}
         />
       </AreaChart>

@@ -140,7 +140,7 @@ async function DashboardContent() {
 
   if (firstError) {
     return (
-      <div className="min-h-full bg-[#f5f5f2] p-5 md:p-8">
+      <div className="min-h-full bg-background p-5 md:p-8">
         <div className="mx-auto max-w-[1600px]">
           <Alert variant="destructive">
             <AlertCircle />
@@ -175,7 +175,7 @@ async function DashboardContent() {
      ========================================================= */
 
   return (
-    <div className="min-h-full bg-[#f5f5f2]">
+    <div className="min-h-full bg-background">
       <div className="mx-auto max-w-[1600px] space-y-6 p-5 md:p-8">
 
         {/* =====================================================
@@ -201,21 +201,21 @@ async function DashboardContent() {
             label="Embarques totales"
             value={total ?? 0}
             icon={Package}
-            iconColor="lime"
+            iconColor="primary"
           />
 
           <StatCard
             label="En tránsito"
             value={inTransit ?? 0}
             icon={Truck}
-            iconColor="amber"
+            iconColor="info"
           />
 
           <StatCard
             label="Retrasados"
             value={delayed ?? 0}
             icon={Clock}
-            iconColor="red"
+            iconColor="danger"
           />
         </div>
 
@@ -290,7 +290,7 @@ async function DashboardContent() {
             RECENT SHIPMENTS
             ===================================================== */}
 
-        <Card className="overflow-hidden rounded-2xl border-0 bg-white shadow-sm">
+        <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
               <CardTitle className="text-base font-semibold">
@@ -429,7 +429,7 @@ function NoShipmentsYet() {
 
 function DashboardSkeleton() {
   return (
-    <div className="min-h-full bg-[#f5f5f2]">
+    <div className="min-h-full bg-background">
       <div className="mx-auto max-w-[1600px] space-y-6 p-5 md:p-8">
 
         {/* Header */}
@@ -447,7 +447,7 @@ function DashboardSkeleton() {
               key={index}
               className="
                 rounded-2xl border-0
-                bg-white shadow-sm
+                bg-card shadow-sm
               "
             >
               <CardContent className="p-5">
@@ -473,7 +473,7 @@ function DashboardSkeleton() {
               key={index}
               className="
                 overflow-hidden rounded-2xl
-                border-0 bg-white shadow-sm
+                border-0 bg-card shadow-sm
               "
             >
               <CardHeader className="space-y-2">
@@ -493,7 +493,7 @@ function DashboardSkeleton() {
         <Card
           className="
             overflow-hidden rounded-2xl
-            border-0 bg-white shadow-sm
+            border-0 bg-card shadow-sm
           "
         >
           <CardHeader className="space-y-2">
@@ -511,7 +511,7 @@ function DashboardSkeleton() {
         <Card
           className="
             overflow-hidden rounded-2xl
-            border-0 bg-white shadow-sm
+            border-0 bg-card shadow-sm
           "
         >
           <CardHeader className="space-y-2">

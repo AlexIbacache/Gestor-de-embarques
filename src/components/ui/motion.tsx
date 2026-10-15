@@ -43,6 +43,14 @@ export const ROW_STAGGER_MS = 25;
 export const ROW_STAGGER_CAP = 4;
 
 /**
+ * Hover elevation timings, kept in the same scale as the entry animations so a
+ * hover cannot drift from the rest of the motion system.
+ */
+export const HOVER_DURATION = 0.2;
+export const HOVER_SCALE = 1.01;
+export const HOVER_Y = -2;
+
+/**
  * The transition used when the user prefers reduced motion.
  *
  * `duration: 0` and no delay means the element snaps straight from its initial
@@ -61,7 +69,7 @@ const REDUCED_TRANSITION = { duration: 0 } as const;
  * `boolean | null` and returns `null` during server rendering, so `null` has to
  * mean "not reduced" or the server and the browser would disagree.
  */
-function useCollapseReducedMotion() {
+export function useCollapseReducedMotion() {
   return useReducedMotion() === true;
 }
 
