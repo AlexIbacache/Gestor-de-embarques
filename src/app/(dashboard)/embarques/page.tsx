@@ -254,43 +254,71 @@ async function ShipmentsResults({
   // browser only ever receives the rows on this page plus the total count in the
   // `Content-Range` header.
   //
-  // `let` rather than `const` because the search and the two facet filters are
-  // applied as subsequent statements. Supabase's builder methods are declared
-  // with a polymorphic `this` return type, so `query.or(...)` and `query.eq(...)`
-  // each keep the exact `PostgrestFilterBuilder` type of `query` and the
-  // reassignment type-checks without a cast; a `const` would only fail on the
-  // assignment itself. `await` on the builder is a `PromiseLike`, so it is
-  // destructured once, after every filter has been chained onto it.
-  let query = supabase
-    .from("shipments")
-    .select("*, client:clients(id, name, company, email)", { count: "exact" })
-    .order(sort, { ascending: order === "asc" })
-    .range(offset, offset + pageSize - 1);
+  // The filtered, ordered query is built by a closure that hands back a *fresh*
+  // builder on every call instead of one chain captured in a `let`. The
+  // `PGRST103` recovery below needs the exact same filters a second time, and
+  // one definition cannot drift from itself the way two hand-written chains
+  // would.
+  //
+  // Inside the closure, `let` rather than `const` because the search and the two
+  // facet filters are applied as subsequent statements. Supabase's builder
+  // methods are declared with a polymorphic `this` return type, so `q.or(...)`
+  // and `q.eq(...)` each keep the exact `PostgrestFilterBuilder` type of `q` and
+  // the reassignment type-checks without a cast; a `const` would only fail on
+  // the assignment itself.
+  const buildQuery = () => {
+    let q = supabase
+      .from("shipments")
+      .select("*, client:clients(id, name, company, email)", { count: "exact" });
 
-  if (search) {
-    // One `.or()` covers reference, origin and destination in a single request,
-    // which is what the input placeholder promises. `.ilike("reference", ...)`
-    // alone would make the placeholder lie. The term is quoted for PostgREST by
-    // `escapePostgrestValue`, so a `,` (clause separator), `.`/`:` (operator
-    // separator) or `(`/`)`/`"`/`\` in the value can neither break the query nor
-    // open another clause; it is matched as literal text.
-    const pattern = `%${search}%`;
-    const value = escapePostgrestValue(pattern);
-    query = query.or(
-      `reference.ilike.${value},origin.ilike.${value},destination.ilike.${value}`,
-    );
-  }
+    if (search) {
+      // One `.or()` covers reference, origin and destination in a single
+      // request, which is what the input placeholder promises.
+      // `.ilike("reference", ...)` alone would make the placeholder lie. The
+      // term is quoted for PostgREST by `escapePostgrestValue`, so a `,` (clause
+      // separator), `.`/`:` (operator separator) or `(`/`)`/`"`/`\` in the
+      // value can neither break the query nor open another clause; it is matched
+      // as literal text.
+      const pattern = `%${search}%`;
+      const value = escapePostgrestValue(pattern);
+      q = q.or(
+        `reference.ilike.${value},origin.ilike.${value},destination.ilike.${value}`,
+      );
+    }
 
-  // Both values are allowlist members returned by `parseEnum`, never the raw
-  // param, so `.eq()` is never handed attacker-chosen SQL. Absent means "All",
-  // which is no clause at all.
-  if (status) query = query.eq("status", status);
-  if (modality) query = query.eq("modality", modality);
+    // Both values are allowlist members returned by `parseEnum`, never the raw
+    // param, so `.eq()` is never handed attacker-chosen SQL. Absent means "All",
+    // which is no clause at all.
+    if (status) q = q.eq("status", status);
+    if (modality) q = q.eq("modality", modality);
+
+    return q.order(sort, { ascending: order === "asc" });
+  };
 
   // `.returns<ShipmentWithClient[]>()` binds the embedded `client` join to the
   // hand-written row type (design decision D19), so `data` is
   // `ShipmentWithClient[] | null` and no `as` assertion is needed.
-  const { data, error, count } = await query.returns<ShipmentWithClient[]>();
+  const { data, error, count } = await buildQuery()
+    .range(offset, offset + pageSize - 1)
+    .returns<ShipmentWithClient[]>();
+
+  // An out-of-range `page` never reaches the clamp below: the offset is past the
+  // last row, so PostgREST answers 416 (`PGRST103`) and the request fails
+  // instead of returning a count. Recover by counting with a range that cannot
+  // overflow — `range(0, 0)` sits at offset 0, which is always satisfiable, even
+  // on an empty table — and redirect to the last page `totalPagesFor` computes.
+  // That helper floors at 1, so the redirect cannot loop.
+  if (error?.code === "PGRST103") {
+    const probe = await buildQuery()
+      .range(0, 0)
+      .returns<ShipmentWithClient[]>();
+    if (probe.error) return <ShipmentsErrorState code={probe.error.code} />;
+    redirect(
+      buildPaginationHref(EMBARQUES_PATH, paramsToQuery(params), {
+        page: totalPagesFor(probe.count ?? 0, pageSize),
+      }),
+    );
+  }
 
   if (error) return <ShipmentsErrorState code={error.code} />;
 
@@ -298,11 +326,16 @@ async function ShipmentsResults({
   const totalCount = count ?? 0;
   const totalPages = totalPagesFor(totalCount, pageSize);
 
-  // Clamp: an out-of-range `page` must never render an empty table. Redirect to
-  // the last valid page, carrying every other param. The zero-result case
-  // (`totalPages === 1`) redirects to page 1, which `buildPaginationHref`
-  // expresses by dropping the param — and page 1 is always `<= totalPages`, so
-  // the redirect cannot loop.
+  // Post-success clamp, kept as a harmless safety net: an out-of-range `page`
+  // must never render an empty table, so redirect to the last valid page,
+  // carrying every other param. The zero-result case (`totalPages === 1`)
+  // redirects to page 1, which `buildPaginationHref` expresses by dropping the
+  // param — and page 1 is always `<= totalPages`, so the redirect cannot loop.
+  //
+  // This is now unreachable through the failing path: an out-of-range `page`
+  // fails earlier with `PGRST103` and is handled by the recovery above. It is
+  // retained only in case a backend ever answers an overflowing range with a
+  // count instead of a 416.
   if (page > totalPages) {
     redirect(
       buildPaginationHref(EMBARQUES_PATH, paramsToQuery(params), {

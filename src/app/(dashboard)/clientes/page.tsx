@@ -162,44 +162,69 @@ async function ClientsResults({ params }: { params: ResolvedSearchParams }) {
   // the browser only ever receives the rows on this page plus the total count in
   // the `Content-Range` header.
   //
-  // `let` rather than `const` because the filters are applied as second
-  // statements. Supabase's builder methods are declared with a polymorphic
-  // `this` return type, so `query.or(...)` / `query.gte(...)` keep the exact
-  // `PostgrestFilterBuilder` type of `query` and the reassignment type-checks
-  // without a cast; a `const` would only fail on the assignment itself.
-  let query = supabase
-    .from("clients")
-    .select("*", { count: "exact" })
-    .order(sort, { ascending: order === "asc" })
-    .range(offset, offset + pageSize - 1);
+  // The filtered, ordered query is built by a closure that hands back a *fresh*
+  // builder on every call instead of one chain captured in a `let`. The
+  // `PGRST103` recovery below needs the exact same filters a second time, and
+  // one definition cannot drift from itself the way two hand-written chains
+  // would.
+  //
+  // Inside the closure, `let` rather than `const` because the filters are
+  // applied as subsequent statements. Supabase's builder methods are declared
+  // with a polymorphic `this` return type, so `q.or(...)` / `q.gte(...)` keep
+  // the exact `PostgrestFilterBuilder` type of `q` and the reassignment
+  // type-checks without a cast; a `const` would only fail on the assignment
+  // itself.
+  const buildQuery = () => {
+    let q = supabase.from("clients").select("*", { count: "exact" });
 
-  if (search) {
-    // One `.or()` covers name, email and company in a single request, which is
-    // what the input placeholder promises. `.ilike("name", ...)` alone would
-    // make the placeholder lie. The term is quoted for PostgREST by
-    // `escapePostgrestValue`, so a `,` (clause separator), `.`/`:` (operator
-    // separator) or `(`/`)`/`"`/`\` in the value can neither break the query nor
-    // open another clause; it is matched as literal text.
-    const pattern = `%${search}%`;
-    const value = escapePostgrestValue(pattern);
-    query = query.or(
-      `name.ilike.${value},email.ilike.${value},company.ilike.${value}`,
-    );
-  }
+    if (search) {
+      // One `.or()` covers name, email and company in a single request, which is
+      // what the input placeholder promises. `.ilike("name", ...)` alone would
+      // make the placeholder lie. The term is quoted for PostgREST by
+      // `escapePostgrestValue`, so a `,` (clause separator), `.`/`:` (operator
+      // separator) or `(`/`)`/`"`/`\` in the value can neither break the query
+      // nor open another clause; it is matched as literal text.
+      const pattern = `%${search}%`;
+      const value = escapePostgrestValue(pattern);
+      q = q.or(
+        `name.ilike.${value},email.ilike.${value},company.ilike.${value}`,
+      );
+    }
 
-  // Half-open day range on the `created_at` instant, boundaries in UTC (design
-  // decision D20 — see `startOfUtcDay` / `startOfNextUtcDay`). `>= from 00:00Z`
-  // and `< day-after-to 00:00Z` includes the whole `to` day without an
-  // inclusive-end rounding error.
-  if (from) query = query.gte("created_at", startOfUtcDay(from));
-  if (to) query = query.lt("created_at", startOfNextUtcDay(to));
+    // Half-open day range on the `created_at` instant, boundaries in UTC (design
+    // decision D20 — see `startOfUtcDay` / `startOfNextUtcDay`). `>= from 00:00Z`
+    // and `< day-after-to 00:00Z` includes the whole `to` day without an
+    // inclusive-end rounding error.
+    if (from) q = q.gte("created_at", startOfUtcDay(from));
+    if (to) q = q.lt("created_at", startOfNextUtcDay(to));
+
+    return q.order(sort, { ascending: order === "asc" });
+  };
 
   // `.returns<Client[]>()` binds the response to the hand-written row type
   // (design decision D19), so `data` is `Client[] | null` from the query itself
   // and no `as` assertion is required. `createClient()` is deliberately built
   // without the generated `Database` generic (no CLI codegen is available),
   // which is exactly why the row type is named explicitly at the boundary.
-  const { data, error, count } = await query.returns<Client[]>();
+  const { data, error, count } = await buildQuery()
+    .range(offset, offset + pageSize - 1)
+    .returns<Client[]>();
+
+  // An out-of-range `page` never reaches the clamp below: the offset is past the
+  // last row, so PostgREST answers 416 (`PGRST103`) and the request fails
+  // instead of returning a count. Recover by counting with a range that cannot
+  // overflow — `range(0, 0)` sits at offset 0, which is always satisfiable, even
+  // on an empty table — and redirect to the last page `totalPagesFor` computes.
+  // That helper floors at 1, so the redirect cannot loop.
+  if (error?.code === "PGRST103") {
+    const probe = await buildQuery().range(0, 0).returns<Client[]>();
+    if (probe.error) return <ClientsErrorState code={probe.error.code} />;
+    redirect(
+      buildPaginationHref(CLIENTS_PATH, paramsToQuery(params), {
+        page: totalPagesFor(probe.count ?? 0, pageSize),
+      }),
+    );
+  }
 
   if (error) return <ClientsErrorState code={error.code} />;
 
@@ -207,11 +232,16 @@ async function ClientsResults({ params }: { params: ResolvedSearchParams }) {
   const totalCount = count ?? 0;
   const totalPages = totalPagesFor(totalCount, pageSize);
 
-  // Clamp: an out-of-range `page` must never render an empty table. Redirect to
-  // the last valid page, carrying every other param. The zero-result case
-  // (`totalPages === 1`) redirects to page 1, which `buildPaginationHref`
-  // expresses by dropping the param — and page 1 is always `<= totalPages`, so
-  // the redirect cannot loop.
+  // Post-success clamp, kept as a harmless safety net: an out-of-range `page`
+  // must never render an empty table, so redirect to the last valid page,
+  // carrying every other param. The zero-result case (`totalPages === 1`)
+  // redirects to page 1, which `buildPaginationHref` expresses by dropping the
+  // param — and page 1 is always `<= totalPages`, so the redirect cannot loop.
+  //
+  // This is now unreachable through the failing path: an out-of-range `page`
+  // fails earlier with `PGRST103` and is handled by the recovery above. It is
+  // retained only in case a backend ever answers an overflowing range with a
+  // count instead of a 416.
   if (page > totalPages) {
     redirect(
       buildPaginationHref(CLIENTS_PATH, paramsToQuery(params), {
