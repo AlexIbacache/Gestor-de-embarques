@@ -49,25 +49,25 @@ export function ShipmentTimelineChart({
     );
   }
 
-  // Gradient definition - using defs prop with type assertion for Recharts
   const gradientId = "timeline-gradient";
-  const defs = (
-    <defs>
-      <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stopColor={CHART_PRIMARY_COLOR} stopOpacity={0.3} />
-        <stop offset="100%" stopColor={CHART_PRIMARY_COLOR} stopOpacity={0} />
-      </linearGradient>
-    </defs>
-  );
 
   return (
     <ResponsiveContainer width="100%" height={compact ? 240 : 280}>
       <AreaChart
         data={chartData}
         margin={{ top: 10, right: compact ? 16 : 10, bottom: 0, left: 0 }}
-        // @ts-expect-error - defs is supported by Recharts but not in TypeScript types
-        defs={defs}
       >
+        {/* `<defs>` is a direct SVG child: Recharts pushes every plain SVG
+            element through `renderByOrder` unchanged, so the gradient renders
+            without a `defs` prop (which is absent from Recharts' TypeScript
+            surface). That is why no compiler suppression is needed here. */}
+        <defs>
+          <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={CHART_PRIMARY_COLOR} stopOpacity={0.3} />
+            <stop offset="100%" stopColor={CHART_PRIMARY_COLOR} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+
         {/* Density adapts at every width: `preserveStartEnd` keeps the edges and
             drops any interior tick that would violate `minTickGap`, so this is
             safe at 360px (edge labels only), 768px (sidebar shrinks the card to

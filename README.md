@@ -81,7 +81,7 @@ El orden importa y es la causa más común de ver la aplicación vacía.
 
 | # | Paso | Dónde | Resultado |
 | --- | --- | --- | --- |
-| 1 | `supabase/schema.sql` | Editor SQL de Supabase | Tablas `clients` y `shipments`, índices, FK, RLS habilitado y políticas |
+| 1 | `supabase/schema.sql` | Editor SQL de Supabase | Tablas `clients` y `shipments`, índices, FK, `CHECK` de dominio, RLS habilitado, políticas y la función `get_dashboard_stats()` |
 | 2 | Crear un usuario de Auth | Dashboard → Authentication → Users | La única vía de entrada: la app no tiene registro |
 | 3 | `supabase/seed.sql` | Editor SQL de Supabase | 15 clientes y 40 embarques |
 
@@ -137,7 +137,7 @@ clients ──1:N──> shipments
 
 **`id` y `created_at` se excluyen explícitamente de todo insert y update.** No vienen en el payload que la app construye (`insert({ name, email, company })`), así que un cliente malicioso no puede elegir su propio UUID ni su fecha de alta aunque manipule el `FormData`.
 
-**`modality` y `status` son `text`, no `enum` ni `CHECK`.** Es la inconsistencia más visible del esquema, y está anotada en la sección de qué mejoraría para producción: el dominio de valores vive en `src/lib/validations/shipment.ts` y en las allowlists de la capa de consulta, no en la base.
+**`modality` y `status` son `text` con `CHECK`, no `enum`.** El dominio de valores vive en `src/lib/domain/shipments.ts` (fuente única) y en la base se replica como `CHECK`: `shipments_status_check` (los cinco estados) y `shipments_modality_check` (`FCL`, `LCL`, `AIR`), más límites de longitud por columna y un rango de sanidad para `eta`. Se prefirió `CHECK` sobre `enum` de Postgres porque agregar un valor no exige `ALTER TYPE` y la aplicación ya versiona las listas.
 
 ## Decisiones de arquitectura
 
@@ -221,9 +221,9 @@ Toda operación de escritura bloquea el doble envío y avisa el resultado. La co
 
 ### El estado del listado vive en la URL
 
-`search`, `status`, `modality`, `sort`, `order` y `page` son query params. La vista es compartible, el botón atrás funciona y el filtro sobrevive a un refresh.
+`search`, `status`, `modality`, `sort`, `order`, `page` y `pageSize` son query params (en clientes también `from` y `to`, el rango de fecha de creación). La vista es compartible, el botón atrás funciona y el filtro sobrevive a un refresh.
 
-Todo valor que llega por query param pasa por una allowlist antes de tocar la consulta: `SORTABLE_COLUMNS` para `.order()` (el param crudo se interpola en la cláusula `order=` de PostgREST, así que nunca se pasa directo), `SHIPMENT_STATUSES` y `SHIPMENT_MODALITIES` para `.eq()`, y `parsePage` con `Number` —no `parseInt`, que aceptaría `"2abc"` como 2—. Las allowlists devuelven el miembro de la lista, nunca el input. El texto de búsqueda pasa por `formatSearchTerm`, que quita `%*,()` antes de que el término se interpole en el `.or()`.
+Todo valor que llega por query param pasa por una allowlist antes de tocar la consulta: `SORTABLE_COLUMNS` para `.order()` (el param crudo se interpola en la cláusula `order=` de PostgREST, así que nunca se pasa directo), `SHIPMENT_STATUSES` y `SHIPMENT_MODALITIES` para `.eq()`, y `parsePage` con `Number` —no `parseInt`, que aceptaría `"2abc"` como 2—. Las allowlists devuelven el miembro de la lista, nunca el input. El texto de búsqueda pasa por `escapePostgrestValue`, que escapa `\` y `"` y envuelve el término en comillas dobles para neutralizar `,`, `.`, `:`, `(` y `)` antes de que se interpole en el `.or()`.
 
 Un `?status=` desconocido es la misma consulta que ningún filtro, porque "todos" se codifica como el parámetro ausente.
 
@@ -240,7 +240,7 @@ Decisiones de seguridad dispersas en las secciones anteriores, con la referencia
 | Sesión verificada en servidor | Cada Server Action | Que un JWT manipulado alcance una mutación |
 | Guarda FK en el delete de `clients` | `supabase/schema.sql` (`shipments.client_id`) | Borrar un cliente con embarques (`23503`) en vez de una cascada silenciosa |
 | Allowlists en todo query param | `SORTABLE_COLUMNS`, `SHIPMENT_STATUSES`, `SHIPMENT_MODALITIES` | Inyección de SQL vía `?sort=`, `?status=` |
-| `formatSearchTerm` | `src/lib/utils.ts` | Escapar del valor en el `.or()` de PostgREST |
+| `escapePostgrestValue` | `src/lib/utils.ts` | Escapar del valor en el `.or()` de PostgREST |
 | Errores por código, no por mensaje | `src/app/actions/embarques.ts` | Filtrar nombres de constraints y de policies RLS |
 | Columnas escribibles explícitas | `.insert({ name, email, company })` | Mass assignment de `id` / `created_at` |
 | UUID validado antes de consultar | `embarques/[id]/page.tsx` | Round-trips a consultas que no pueden matchear |
@@ -255,12 +255,12 @@ Ordenado por lo que más duele primero. Esto no es una lista de deseos: es el ra
 
 **1. Pruebas automatizadas — no hay ninguna.** Es la carencia más grande y la más difícil de recuperar tarde, porque sin tests cualquier refactor es un salto al vacío. El orden en que las escribiría:
 
-- *Unit* para lo puro y sin DOM: `formatSearchTerm`, `formatDate` / `formatDateTime`, los parsers de query params y `resolveSortColumn`. Son funciones de un archivo, sin dependencias, y cubren la capa donde vive la sanitización.
+- *Unit* para lo puro y sin DOM: `escapePostgrestValue`, `formatDate` / `formatDateTime`, los parsers de query params y `resolveSortColumn`. Son funciones de un archivo, sin dependencias, y cubren la capa donde vive la sanitización.
 - *Integración* para las 7 Server Actions, con la sesión real o un stub de `createClient`. Es donde está el 90% de la superficie de ataque.
 - *E2E* de los cinco recorridos que el enunciado nombra: login, alta de cliente, alta de embarque, edición, borrado.
 - Visual regression sobre los estados de carga, porque un skeleton desalineado es exactamente el tipo de regresión que nadie detecta a tiempo.
 
-**2. Restricción del dominio en la base.** `status` y `modality` son `text` libre. `src/lib/validations/shipment.ts` y las allowlists los acotan, pero el esquema declara en su propio encabezado que "la base de datos no debe depender de esa validación" — y acá depende. Un `create type shipment_status as enum (...)` más `alter column status type shipment_status using status::shipment_status` cierra el dominio donde debe estar, y el `CHECK` de `reference` por formato sería lo mismo para el otro lado.
+**2. Dominio como enum real, no solo `CHECK`.** `status` y `modality` ya están acotados por `CHECK` (`shipments_status_check`, `shipments_modality_check`), así que el dominio vive en la base y no solo en Zod. El paso siguiente es un `create type shipment_status as enum (...)` más `alter column status type shipment_status using status::shipment_status`, que además le da tipos a PostgREST, y un `CHECK` de formato sobre `reference`.
 
 **3. Concurrencia optimista.** Los updates filtran solo por `id` (`.eq("id", target.data.id)`), así que son *last-write-wins*: dos pestañas abiertas sobre el mismo embarque se pisan en silencio y el usuario que escribió segundo no se entera de que perdió el primer cambio. No hay `updated_at` en ninguna tabla, así que hoy no hay ni siquiera con qué detectarlo. Lo sumaría como columna y lo usaría como predicado del `.update()`, devolviendo `PGRST116` como "otro usuario modificó esto".
 
@@ -268,9 +268,9 @@ Ordenado por lo que más duele primero. Esto no es una lista de deseos: es el ra
 
 **5. Límite de 200 clientes en el formulario de embarque.** `CLIENT_LIMIT = 200` acota el `Select` de clientes que se le ofrece al usuario. Hoy, con 15 clientes, es invisible. Pasado ese número, el usuario no puede elegir a un cliente que existe y **no hay ningún aviso**: el dropdown simplemente no lo lista. Con búsqueda asíncrona contra la base (un `ClientCombobox` que consulta al escribir) desaparece el techo sin agregar paginación a un `Select` nativo.
 
-**6. Aggregate queries del dashboard.** Cuatro consultas separadas para los contadores, lanzadas en paralelo. A la escala de este dataset son lo correcto y más simples que una alternativa. Con volumen las cuatro se volverían el cuello de botella, y la respuesta es una consulta agrupada o un cache de corto plazo, no reescribir la página.
+**6. Agregados del dashboard.** Hoy los KPIs y los tres gráficos se resuelven con una sola llamada a la RPC `get_dashboard_stats()` (agregación en PostgreSQL, un solo roundtrip). Con volumen el siguiente paso es cachear o materializar los buckets mensuales, no reescribir la página.
 
-**7. Historial de migraciones.** `schema.sql` es un script aplastado e idempotente, correcto para partir de cero. En producción haría falta un directorio `supabase/migrations/` para que cada cambio sea versionado y reversible de forma independiente.
+**7. Historial de migraciones.** `schema.sql` sigue siendo un script aplastado e idempotente, correcto para partir de cero, y ya existe `supabase/migrations/` (por ahora con el script de endurecimiento). El siguiente paso es que cada cambio del esquema aterrice como una migración versionada y reversible en ese directorio, no solo en el script aplastado.
 
 **8. Observabilidad y entrega continua.** Sin logging estructurado, sin reporte de errores, y sin CI. Como mínimo: un pipeline que corra `pnpm build`, `pnpm lint` y `pnpm exec tsc --noEmit` en cada push, más captura de errores en las Server Actions. Hoy un error en producción se descubre mirando el `console` del navegador de un usuario.
 
@@ -319,6 +319,8 @@ src/
 └── middleware.ts
 
 supabase/
+├── migrations/
+│   └── 20261015_hardening.sql
 ├── schema.sql
 └── seed.sql
 ```

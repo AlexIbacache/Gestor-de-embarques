@@ -96,13 +96,21 @@ async function DashboardContent() {
    * three charts and the KPIs all read this one payload.
    */
   const [statsResult, recentResult] = await Promise.all([
+    // The RPC payload cannot be bound with `.returns<T>()`: `createClient()` is
+    // built without the generated `Database` generic, so supabase-js types an
+    // RPC result as `any`, and `any` distributes over `.returns`' conditional so
+    // the result becomes `DashboardStats | { Error: ... }` (verified against
+    // `pnpm build`). The single assertion on `statsResult.data` below is the
+    // honest boundary for this one query; every table query uses `.returns<T>()`
+    // or `.single<T>()` (design decision D19).
     supabase.rpc("get_dashboard_stats"),
 
     supabase
       .from("shipments")
       .select("*, client:clients(id, name, company, email)")
       .order("created_at", { ascending: false })
-      .limit(RECENT_SHIPMENT_LIMIT),
+      .limit(RECENT_SHIPMENT_LIMIT)
+      .returns<ShipmentWithClient[]>(),
   ]);
 
   const firstError = statsResult.error ?? recentResult.error ?? null;
@@ -115,11 +123,13 @@ async function DashboardContent() {
     return <DashboardErrorState code={firstError.code} />;
   }
 
-  // `createClient()` is built without the generated `Database` generic, so the
-  // RPC payload is typed `any`. Re-typed once, here, at the boundary.
+  // The recent-shipment list is bound at the query with `.returns<T>()` (design
+  // decision D19), so it arrives typed with no assertion. The RPC payload is the
+  // one exception — see the comment on the query above — and is asserted, once,
+  // at this boundary so `any` never reaches `DashboardStats`.
   const stats = (statsResult.data as DashboardStats | null) ?? EMPTY_STATS;
 
-  const shipments = (recentResult.data ?? []) as ShipmentWithClient[];
+  const shipments = recentResult.data ?? [];
 
   // The RPC supplies every counter; the KPIs read it instead of issuing extra
   // `head: true` count queries.

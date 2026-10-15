@@ -194,13 +194,16 @@ async function ClientsResults({ params }: { params: ResolvedSearchParams }) {
   if (from) query = query.gte("created_at", startOfUtcDay(from));
   if (to) query = query.lt("created_at", startOfNextUtcDay(to));
 
-  const { data, error, count } = await query;
+  // `.returns<Client[]>()` binds the response to the hand-written row type
+  // (design decision D19), so `data` is `Client[] | null` from the query itself
+  // and no `as` assertion is required. `createClient()` is deliberately built
+  // without the generated `Database` generic (no CLI codegen is available),
+  // which is exactly why the row type is named explicitly at the boundary.
+  const { data, error, count } = await query.returns<Client[]>();
 
   if (error) return <ClientsErrorState code={error.code} />;
 
-  // `createClient()` is built without the generated `Database` generic, so
-  // PostgREST types `data` as `any`. Re-typed once, here, at the boundary.
-  const clients = (data ?? []) as Client[];
+  const clients = data ?? [];
   const totalCount = count ?? 0;
   const totalPages = totalPagesFor(totalCount, pageSize);
 

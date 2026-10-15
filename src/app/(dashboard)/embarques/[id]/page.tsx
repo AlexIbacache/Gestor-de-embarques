@@ -59,7 +59,7 @@ export default async function ShipmentPage({ params }: { params: Params }) {
     .from("shipments")
     .select("*, client:clients(id, name, company, email)")
     .eq("id", shipmentId)
-    .maybeSingle();
+    .maybeSingle<ShipmentWithClient>();
 
   /**
    * A transport failure and a missing row are different outcomes and are
@@ -85,12 +85,10 @@ export default async function ShipmentPage({ params }: { params: Params }) {
   // No error, no row: the shipment genuinely does not exist (or RLS hid it).
   if (!data) notFound();
 
-  /**
-   * `createClient()` is built without the generated `Database` generic, so
-   * PostgREST types `data` as `any`. Re-typed once, here, at the boundary —
-   * `ShipmentDetail` receives a real type and the cast does not spread.
-   */
-  const shipment = data as ShipmentWithClient;
+  // `.maybeSingle<ShipmentWithClient>()` types the row from the query (design
+  // decision D19), so `data` is already `ShipmentWithClient` after the
+  // `notFound()` guard — no `as` assertion.
+  const shipment = data;
 
   return (
     <div className="space-y-6">

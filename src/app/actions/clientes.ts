@@ -116,23 +116,24 @@ export async function createClientAction(
   // the server-generated `id` and `created_at` instead of an echo of the input —
   // the clients table renders `created_at`, so echoing it back would render the
   // wrong date.
-  const { data, error } = await supabase
+  // `.single<Client>()` types the row from the query, so `any` never reaches
+  // `ActionResult<Client>` and this boundary needs no `as` assertion. `success`
+  // is the `PostgrestSingleResponse` discriminant: the branch below only sees
+  // the failure shape, so afterwards `response.data` is a real `Client` (design
+  // decision D19).
+  const response = await supabase
     .from("clients")
     .insert({ name, email, company })
     .select()
-    .single();
+    .single<Client>();
 
-  if (error) return { success: false, error: mutationError(error) };
-
-  // `createClient()` in `src/lib/supabase/server.ts` is built without the
-  // generated `Database` generic, so PostgREST types `data` as `any`. The row is
-  // re-typed once, at this single boundary, so `any` never reaches
-  // `ActionResult<Client>`.
-  const persisted = data as Client;
+  if (!response.success) {
+    return { success: false, error: mutationError(response.error) };
+  }
 
   revalidatePath(CLIENTS_PATH);
 
-  return { success: true, data: persisted };
+  return { success: true, data: response.data };
 }
 
 export async function updateClientAction(
@@ -166,30 +167,28 @@ export async function updateClientAction(
 
   // `created_at` is deliberately not in the update payload: it is the creation
   // timestamp and must survive an edit unchanged.
-  const { data, error } = await supabase
+  const response = await supabase
     .from("clients")
     .update({ name, email, company })
     .eq("id", target.data.id)
     .select()
-    .single();
+    .single<Client>();
 
-  if (error) {
+  if (!response.success) {
     // PGRST116 is PostgREST reporting that `.eq("id", ...)` selected zero rows,
     // which `.single()` turns into an error. That is a "the row is gone" answer,
     // not a transport failure: the client was deleted between render and submit.
     // Everything else is a real failure and gets its own message.
-    if (error.code === "PGRST116") {
+    if (response.error.code === "PGRST116") {
       return { success: false, error: CLIENT_NOT_FOUND_ERROR };
     }
 
-    return { success: false, error: mutationError(error) };
+    return { success: false, error: mutationError(response.error) };
   }
-
-  const persisted = data as Client;
 
   revalidatePath(CLIENTS_PATH);
 
-  return { success: true, data: persisted };
+  return { success: true, data: response.data };
 }
 
 export async function deleteClientAction(input: {
@@ -219,7 +218,8 @@ export async function deleteClientAction(input: {
     .from("clients")
     .delete()
     .eq("id", target.data.id)
-    .select("id");
+    .select("id")
+    .returns<{ id: string }[]>();
 
   // `23503` is the `shipments.client_id` FK (ON DELETE NO ACTION): the client
   // still has shipments, so it cannot be removed. It gets its own delete copy,
@@ -232,7 +232,10 @@ export async function deleteClientAction(input: {
     return { success: false, error: mutationError(error) };
   }
 
-  const deleted = (data ?? []) as { id: string }[];
+  // `.returns<{ id: string }[]>()` types the deleted rows from the query (design
+  // decision D19), so `data` is the array of removed ids — `null` only in the
+  // failure branch already handled above.
+  const deleted = data ?? [];
 
   if (deleted.length === 0) {
     return { success: false, error: DELETE_NOT_FOUND_ERROR };

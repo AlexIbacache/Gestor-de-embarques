@@ -32,7 +32,9 @@ export const SHIPMENT_STATUS_STYLES: Record<ShipmentStatus, string> = {
  * Client Components without a `"use client"` boundary.
  *
  * The label is rendered verbatim from `status`, which keeps accents (e.g. the
- * in-transit value) intact — the database check constraint stores the same string.
+ * in-transit value) intact. The `shipments_status_check` CHECK constraint in
+ * `supabase/schema.sql` stores the same literals — the database enforces the
+ * same domain the canonical module in `src/lib/domain/shipments.ts` defines.
  */
 export function ShipmentStatusBadge({ status }: { status: ShipmentStatus }) {
   return (

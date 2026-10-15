@@ -57,9 +57,9 @@
 
 ## 7. Calidad de código y exactitud documental
 
-- [ ] 7.1 Eliminar los casts `as`/manuales y el `any` mediante `.returns<T>()` y helpers tipados, y retirar el `@ts-expect-error` de `shipment-timeline-chart.tsx` tipando correctamente los `defs` de Recharts; verificar con `pnpm build` que no quedan casts sin justificar (`rg "as [A-Z]|@ts-expect-error" src/`) y que cualquier supresión restante tiene comentario que demuestra por qué el compilador está equivocado
-- [ ] 7.2 Corregir los desfases documentales conocidos: comentario de agregados de `dashboard/page.tsx` (hoy afirma que todo se agrega en PostgreSQL — tras 6.5 debe ser verdad y el comentario debe reflejarlo), comentario de constraint inexistente en `shipment-status-badge.tsx`, claim "ordenables" del README (verdadero tras 4.6), comentario WU-9 de `shipment-table.tsx` sobre la ruta de detalle, cumplimiento de `dashboard-charts` y consistencia general del README; verificar con `rg` que cada comentario corregido describe el comportamiento real
-- [ ] 7.3 `pnpm build` y `pnpm lint` limpios; commit del grupo como `refactor(types): ...` y `docs: ...`
+- [x] 7.1 Eliminar los casts `as`/manuales y el `any` mediante `.returns<T>()` y helpers tipados, y retirar el `@ts-expect-error` de `shipment-timeline-chart.tsx` tipando correctamente los `defs` de Recharts; verificar con `pnpm build` que no quedan casts sin justificar (`rg "as [A-Z]|@ts-expect-error" src/`) y que cualquier supresión restante tiene comentario que demuestra por qué el compilador está equivocado
+- [x] 7.2 Corregir los desfases documentales conocidos: comentario de agregados de `dashboard/page.tsx` (hoy afirma que todo se agrega en PostgreSQL — tras 6.5 debe ser verdad y el comentario debe reflejarlo), comentario de constraint inexistente en `shipment-status-badge.tsx`, claim "ordenables" del README (verdadero tras 4.6), comentario WU-9 de `shipment-table.tsx` sobre la ruta de detalle, cumplimiento de `dashboard-charts` y consistencia general del README; verificar con `rg` que cada comentario corregido describe el comportamiento real
+- [x] 7.3 `pnpm build` y `pnpm lint` limpios; commit del grupo como `refactor(types): ...` y `docs: ...`
 
 ## 8. Cierre e integración
 

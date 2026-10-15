@@ -133,7 +133,7 @@ function parseSearch(raw: string | undefined): string | undefined {
  * a byte-for-byte comparison matches. Normalising both sides anyway makes the
  * comparison survive a value pasted from a source that stores the decomposed
  * form (`a` + U+0301), which is not the same string and would otherwise be
- * rejected as unknown.
+ * rejected as an unknown value.
  */
 function parseEnum<T extends string>(
   raw: string | undefined,
@@ -197,11 +197,14 @@ export default async function EmbarquesPage({
     .from("clients")
     .select("*")
     .order("company", { ascending: true })
-    .limit(CLIENT_LIMIT);
+    .limit(CLIENT_LIMIT)
+    .returns<Client[]>();
 
-  // `createClient()` is built without the generated `Database` generic, so
-  // PostgREST types `data` as `any`. Re-typed once, here, at the boundary.
-  const clients = (clientRows ?? []) as Client[];
+  // `.returns<Client[]>()` types the response from the query (design decision
+  // D19), so `data` is `Client[] | null` and no `as` assertion is needed.
+  // `createClient()` is built without the generated `Database` generic, which is
+  // why the row type is named explicitly here.
+  const clients = clientRows ?? [];
 
   return (
     <div className="space-y-6">
@@ -284,11 +287,14 @@ async function ShipmentsResults({
   if (status) query = query.eq("status", status);
   if (modality) query = query.eq("modality", modality);
 
-  const { data, error, count } = await query;
+  // `.returns<ShipmentWithClient[]>()` binds the embedded `client` join to the
+  // hand-written row type (design decision D19), so `data` is
+  // `ShipmentWithClient[] | null` and no `as` assertion is needed.
+  const { data, error, count } = await query.returns<ShipmentWithClient[]>();
 
   if (error) return <ShipmentsErrorState code={error.code} />;
 
-  const shipments = (data ?? []) as ShipmentWithClient[];
+  const shipments = data ?? [];
   const totalCount = count ?? 0;
   const totalPages = totalPagesFor(totalCount, pageSize);
 

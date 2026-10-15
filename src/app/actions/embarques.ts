@@ -126,23 +126,24 @@ export async function createShipmentAction(
   // `eta` is a Postgres `date`, which PostgREST accepts and returns as
   // `yyyy-mm-dd` — the same shape `shipmentSchema` validates, so no conversion
   // happens on either side.
-  const { data, error } = await supabase
+  // `.single<Shipment>()` types the row from the query, so `any` never reaches
+  // `ActionResult<Shipment>` and this boundary needs no `as` assertion. `success`
+  // is the `PostgrestSingleResponse` discriminant: the branch below only sees
+  // the failure shape, so afterwards `response.data` is a real `Shipment` (design
+  // decision D19).
+  const response = await supabase
     .from("shipments")
     .insert({ reference, client_id, origin, destination, modality, status, eta })
     .select()
-    .single();
+    .single<Shipment>();
 
-  if (error) return { success: false, error: mutationError(error) };
-
-  // `createClient()` in `src/lib/supabase/server.ts` is built without the
-  // generated `Database` generic, so PostgREST types `data` as `any`. The row is
-  // re-typed once, at this single boundary, so `any` never reaches
-  // `ActionResult<Shipment>`.
-  const persisted = data as Shipment;
+  if (!response.success) {
+    return { success: false, error: mutationError(response.error) };
+  }
 
   revalidatePath(SHIPMENTS_PATH);
 
-  return { success: true, data: persisted };
+  return { success: true, data: response.data };
 }
 
 export async function updateShipmentAction(
@@ -177,32 +178,30 @@ export async function updateShipmentAction(
 
   // `created_at` is deliberately not in the update payload: it is the creation
   // timestamp and must survive an edit unchanged.
-  const { data, error } = await supabase
+  const response = await supabase
     .from("shipments")
     .update({ reference, client_id, origin, destination, modality, status, eta })
     .eq("id", target.data.id)
     .select()
-    .single();
+    .single<Shipment>();
 
-  if (error) {
+  if (!response.success) {
     // PGRST116 is PostgREST reporting that `.eq("id", ...)` selected zero rows,
     // which `.single()` turns into an error. That is a "the row is gone" answer,
     // not a transport failure: the shipment was deleted between render and
     // submit. Everything else is a real failure and gets its own message —
     // including the `23505` a reference collision and the `23503` a client that
     // no longer exists, which `mutationError` maps to dedicated copy.
-    if (error.code === "PGRST116") {
+    if (response.error.code === "PGRST116") {
       return { success: false, error: SHIPMENT_NOT_FOUND_ERROR };
     }
 
-    return { success: false, error: mutationError(error) };
+    return { success: false, error: mutationError(response.error) };
   }
-
-  const persisted = data as Shipment;
 
   revalidatePath(SHIPMENTS_PATH);
 
-  return { success: true, data: persisted };
+  return { success: true, data: response.data };
 }
 
 export async function deleteShipmentAction(input: {
@@ -230,15 +229,18 @@ export async function deleteShipmentAction(input: {
   // selection PostgREST returns `data: null`, so a delete that matched nothing
   // is indistinguishable from a successful one. With it, the response is the
   // array of rows that were actually removed and its length is the truth.
+  // `.returns<{ id: string }[]>()` binds that array to its real shape (design
+  // decision D19), so no `as` assertion is needed below.
   const { data, error } = await supabase
     .from("shipments")
     .delete()
     .eq("id", target.data.id)
-    .select("id");
+    .select("id")
+    .returns<{ id: string }[]>();
 
   if (error) return { success: false, error: mutationError(error) };
 
-  const deleted = (data ?? []) as { id: string }[];
+  const deleted = data ?? [];
 
   // Zero rows is not a success: reporting `success: true` here would tell the
   // UI a shipment was removed when nothing was. The row was deleted or hidden by

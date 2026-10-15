@@ -93,7 +93,7 @@ function buildSortHref(current: URLSearchParams, column: SortableColumn): string
   return `${EMBARQUES_PATH}?${next.toString()}`;
 }
 
-/** WU-9 detail route. It does not exist yet; the link is wired in advance. */
+/** Detail route for a shipment row: `src/app/(dashboard)/embarques/[id]/page.tsx`. */
 function shipmentHref(id: string): string {
   return `/embarques/${id}`;
 }
