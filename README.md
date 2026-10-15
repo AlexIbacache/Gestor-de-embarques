@@ -209,6 +209,16 @@ El **mensaje** de Supabase nunca se muestra: está en inglés y puede nombrar in
 
 `.delete().eq("id", id)` sin selección devuelve `data: null` y ningún error: un borrado que no coincidió con nada es indistinguible de uno exitoso. Por eso las actions agregan `.select("id")` — la respuesta es el array de filas realmente eliminadas— y tratan `length === 0` como error. Devolver `success: true` ahí le diría a la interfaz que se eliminó un registro que sigue existiendo. Lo aplican tanto `deleteShipmentAction` sobre `shipments` como `deleteClientAction` sobre `clients`.
 
+### Feedback de escritura y confirmaciones
+
+Toda operación de escritura bloquea el doble envío y avisa el resultado. La convención es la misma para clientes, embarques y sesión:
+
+- **Estado pendiente.** Los controles quedan `disabled` mientras corre la Server Action, y el handler ignora un segundo disparo que llegue antes de que React aplique el `disabled` (el caso real es el `Enter` repetido). El texto del botón cambia mientras tanto: `Guardando...`, `Eliminando...`, `Cerrando sesión...`.
+- **Toast de resultado.** En clientes y embarques, el éxito y el error se anuncian con Sonner (`toast.success` / `toast.error`); los errores de validación además se renderizan inline bajo cada campo, porque un toast se desvanece solo y dejaría al usuario sin saber qué input corregir.
+- **Confirmaciones.** Las eliminaciones pasan por un diálogo de confirmación explícito y solo se ejecutan si el usuario confirma. Las ediciones **no** agregan un segundo modal: el diálogo de formulario es la superficie de confirmación — el usuario revisa los datos y confirma con "Guardar". Pedir una confirmación extra después de "Guardar" sería fricción sin riesgo destructivo que la justifique, porque la edición es reversible volviendo a editar.
+- **Inicio de sesión.** El formulario bloquea el reenvío mientras la action corre y el éxito confirma con un toast antes de navegar a `/dashboard`: `loginAction` devuelve el destino en lugar de redirigir, por la misma razón estructural que el logout. El **error** es un `Alert` inline (persistente y anunciado por lectores de pantalla), no un toast, y a propósito no se dispara un toast de error duplicado: el mensaje debe quedar en pantalla.
+- **Cierre de sesión.** No es silencioso. El botón muestra estado pendiente, `logoutAction` destruye la sesión en el servidor y devuelve el resultado en lugar de redirigir, y el cliente muestra el toast y recién entonces navega a `/login`. Un `redirect()` dentro de la action navegaría antes de que el toast alcance a renderizarse. Tanto la sidebar de escritorio como la navegación mobile usan el mismo handler.
+
 ### El estado del listado vive en la URL
 
 `search`, `status`, `modality`, `sort`, `order` y `page` son query params. La vista es compartible, el botón atrás funciona y el filtro sobrevive a un refresh.

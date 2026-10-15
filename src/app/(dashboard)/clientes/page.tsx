@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AlertCircle, ChevronLeft, ChevronRight, Search, Users } from "lucide-react";
 
 import { ClientFilters } from "@/components/clientes/client-filters";
+import { ClientsSkeleton } from "@/components/clientes/client-skeleton";
 import { ClientTable } from "@/components/clientes/client-table";
 import { NewClientButton } from "@/components/clientes/new-client-button";
 import {
@@ -13,7 +14,6 @@ import {
 } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
 import { createClient } from "@/lib/supabase/server";
 import { formatSearchTerm } from "@/lib/utils";
 import type { Client } from "@/types/database";
@@ -370,47 +370,5 @@ function PageControl({
     <Button variant="outline" size="sm" render={<Link href={href} />}>
       {children}
     </Button>
-  );
-}
-
-/**
- * Placeholder for the `Suspense` boundary. Rectangles only — the literal text
- * "Cargando..." is forbidden by the project UI convention.
- */
-function ClientsSkeleton() {
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
-        <Skeleton className="h-4 w-24" />
-      </div>
-
-      <div className="hidden md:block">
-        <Card className="py-0">
-          <CardContent className="space-y-4 px-4 py-4">
-            <Skeleton className="h-4 w-full max-w-md" />
-            {[0, 1, 2, 3, 4].map((index) => (
-              <div key={index} className="flex items-center gap-4">
-                <Skeleton className="h-4 flex-1" />
-                <Skeleton className="hidden h-4 flex-1 lg:block" />
-                <Skeleton className="hidden h-4 w-40 lg:block" />
-                <Skeleton className="h-4 w-20 shrink-0" />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="space-y-3 md:hidden">
-        {[0, 1, 2, 3, 4].map((index) => (
-          <Card key={index}>
-            <CardContent className="space-y-3">
-              <Skeleton className="h-4 w-2/3" />
-              <Skeleton className="h-3 w-1/3" />
-              <Skeleton className="h-3 w-1/2" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    </div>
   );
 }

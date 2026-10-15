@@ -1,7 +1,8 @@
 "use client";
 
+import { useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   LogOut,
@@ -9,6 +10,7 @@ import {
   Truck,
   Users,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { logoutAction } from "@/app/actions/auth";
 import { Button } from "@/components/ui/button";
@@ -43,16 +45,35 @@ function isActiveRoute(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-/**
- * `logoutAction` performs the sign out and issues the redirect on the server,
- * so the button needs no client-side navigation and no `<form action>`.
- */
-function handleLogout(): void {
-  void logoutAction();
-}
-
 export function Sidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  /**
+   * `logoutAction` signs out and returns the outcome instead of redirecting, so
+   * the confirmation toast has time to render. The navigation is issued here,
+   * from the client, after the toast is queued. `isPending` disables the button
+   * for the whole request, and this guard rejects a second click that lands
+   * before React commits the disabled state.
+   */
+  function handleLogout() {
+    if (isPending) return;
+
+    startTransition(async () => {
+      const result = await logoutAction();
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Sesión cerrada correctamente.");
+      // `replace`, not `push`: the signed-out page must not stay reachable via
+      // the browser Back button.
+      router.replace("/login");
+    });
+  }
 
   return (
     <aside className="hidden h-dvh w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex md:sticky md:top-0">
@@ -111,10 +132,11 @@ export function Sidebar({ user }: { user: SidebarUser }) {
             type="button"
             variant="ghost"
             onClick={handleLogout}
+            disabled={isPending}
             className="w-full justify-start gap-2"
           >
             <LogOut className="size-4" aria-hidden="true" />
-            Cerrar sesión
+            {isPending ? "Cerrando sesión..." : "Cerrar sesión"}
           </Button>
         </div>
       </div>

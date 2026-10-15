@@ -1,8 +1,10 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
 import { useFormStatus } from "react-dom";
+import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
+import { toast } from "sonner";
 
 import { loginAction } from "@/app/actions/auth";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -11,9 +13,25 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 export function LoginForm() {
+  const router = useRouter();
   const [state, formAction, isPending] = useActionState(loginAction, {
     error: null,
+    redirectTo: null,
   });
+
+  /**
+   * `loginAction` returns the destination instead of redirecting, so the
+   * confirmation toast has time to render before navigation. Errors are shown
+   * through the inline `Alert` below — deliberately not a toast, and
+   * deliberately not both.
+   */
+  useEffect(() => {
+    const destination = state.redirectTo;
+    if (!destination) return;
+
+    toast.success("Sesión iniciada correctamente.");
+    router.replace(destination);
+  }, [state.redirectTo, router]);
 
   return (
     <form action={formAction} className="grid gap-4">

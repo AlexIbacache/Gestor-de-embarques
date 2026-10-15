@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { LogOut, Menu, Search } from "lucide-react";
+import { toast } from "sonner";
 
 import { logoutAction } from "@/app/actions/auth";
 import { NAV_ITEMS, type SidebarUser } from "@/components/layout/sidebar";
@@ -31,7 +32,34 @@ function isActiveRoute(pathname: string, href: string): boolean {
 
 export function MobileNav({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [isPending, startTransition] = useTransition();
+
+  /**
+   * Mirrors the desktop sidebar's handler: `logoutAction` signs out and returns
+   * the outcome (it no longer redirects), so the confirmation toast has time to
+   * render before the client navigates. The sheet is closed up front so the
+   * pending state is not hidden behind the overlay, and the `isPending` guard
+   * rejects a second click that lands before React commits the disabled state.
+   */
+  function handleLogout() {
+    if (isPending) return;
+
+    setOpen(false);
+
+    startTransition(async () => {
+      const result = await logoutAction();
+
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+
+      toast.success("Sesión cerrada correctamente.");
+      router.replace("/login");
+    });
+  }
 
   return (
     <div className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/80 px-3 backdrop-blur md:hidden">
@@ -106,12 +134,14 @@ export function MobileNav({ user }: { user: SidebarUser }) {
               </div>
 
               <Button
+                type="button"
                 variant="ghost"
-                onClick={() => void logoutAction()}
+                onClick={handleLogout}
+                disabled={isPending}
                 className="w-full justify-start gap-2"
               >
                 <LogOut className="size-4" aria-hidden="true" />
-                Cerrar sesión
+                {isPending ? "Cerrando sesión..." : "Cerrar sesión"}
               </Button>
             </div>
           </div>

@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +8,16 @@ export type ActionResult<T = undefined> =
   | { success: true; data: T }
   | { success: false; error: string; fieldErrors?: Record<string, string[]> };
 
-export type LoginState = { error: string | null };
+export type LoginState = {
+  error: string | null;
+  /**
+   * Set only on success: the destination the client navigates to after showing
+   * the confirmation toast. `loginAction` deliberately does not `redirect()`
+   * itself, so the toast has time to render. Task 6.8 will replace the
+   * hardcoded value with the validated `next` parameter.
+   */
+  redirectTo: string | null;
+};
 
 const loginSchema = z.object({
   email: z.string().trim().email(),
@@ -30,7 +38,7 @@ export async function loginAction(
   if (!parsed.success) {
     // Deliberately not the per-issue Zod messages: which field failed is not
     // the visitor's business, and reporting it leaks the validation rules.
-    return { error: "Revisá los datos ingresados." };
+    return { error: "Revisá los datos ingresados.", redirectTo: null };
   }
 
   const supabase = await createClient();
@@ -45,22 +53,38 @@ export async function loginAction(
     // Supabase auth errors are matched, never forwarded: the raw message is
     // English, can name internal auth reasons, and is not UI copy.
     if (message.includes("invalid login credentials")) {
-      return { error: INVALID_CREDENTIALS_ERROR };
+      return { error: INVALID_CREDENTIALS_ERROR, redirectTo: null };
     }
 
-    return { error: GENERIC_LOGIN_ERROR };
+    return { error: GENERIC_LOGIN_ERROR, redirectTo: null };
   }
 
-  // `redirect()` throws by design. Do not catch it — the navigation must pass
-  // through.
-  redirect("/dashboard");
+  // Success: report the destination instead of redirecting. A `redirect()` here
+  // would navigate before the client's confirmation toast could render, the same
+  // structural problem the logout action avoids. Hardcoded target for now; task
+  // 6.8 fills it with the validated `next` without re-plumbing the form.
+  return { error: null, redirectTo: "/dashboard" };
 }
 
-export async function logoutAction(): Promise<void> {
+/**
+ * Signs the user out and reports the outcome to the caller.
+ *
+ * Deliberately does NOT call `redirect()`: a redirect issued here navigates the
+ * moment the action resolves, so a confirmation toast fired afterwards would
+ * never be seen. The calling component shows the toast and then navigates to
+ * `/login` itself. `signOut()` is what actually destroys the session
+ * server-side — the redirect never was.
+ */
+export async function logoutAction(): Promise<ActionResult> {
   const supabase = await createClient();
-  await supabase.auth.signOut();
+  const { error } = await supabase.auth.signOut();
 
-  // `redirect()` throws by design. Wrapping it in a try/catch would swallow the
-  // throw and leave the caller on a page it just signed out of.
-  redirect("/login");
+  if (error) {
+    return {
+      success: false,
+      error: "No pudimos cerrar la sesión. Intentá de nuevo.",
+    };
+  }
+
+  return { success: true, data: undefined };
 }

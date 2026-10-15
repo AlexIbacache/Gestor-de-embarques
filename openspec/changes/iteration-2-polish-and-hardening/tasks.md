@@ -19,12 +19,12 @@
 
 ## 3. Estados de carga y consistencia de feedback
 
-- [ ] 3.1 Crear `src/app/(dashboard)/dashboard/loading.tsx` reutilizando el skeleton del dashboard; verificar navegando a `/dashboard` que la ruta muestra skeletons durante la carga (throttling de red en DevTools)
-- [ ] 3.2 Crear `src/app/(dashboard)/clientes/loading.tsx` reutilizando `ClientsSkeleton`; verificar igual que 3.1 en `/clientes`
-- [ ] 3.3 Crear `src/app/(dashboard)/embarques/loading.tsx` reutilizando `ShipmentsSkeleton`; verificar igual que 3.1 en `/embarques`
-- [ ] 3.4 Crear `src/app/(dashboard)/embarques/[id]/loading.tsx` con skeleton del detalle; verificar igual que 3.1 en un detalle válido
-- [ ] 3.5 Agregar estado pendiente + toast al logout en `sidebar.tsx` (reemplazar el `void logoutAction()`); verificar que al cerrar sesión el botón muestra estado de progreso, no permite doble clic y aparece toast de confirmación
-- [ ] 3.6 Pasada de consistencia: toda operación de escritura (crear/editar/eliminar cliente y embarque, login, logout) tiene estado pendiente + toast de éxito/error, y la edición confirma desde el propio diálogo de formulario sin modal extra; verificar manualmente los 7 flujos y documentar el criterio de edición en el README; commit del grupo como `feat(feedback): ...`
+- [x] 3.1 Crear `src/app/(dashboard)/dashboard/loading.tsx` reutilizando el skeleton del dashboard; verificar navegando a `/dashboard` que la ruta muestra skeletons durante la carga (throttling de red en DevTools)
+- [x] 3.2 Crear `src/app/(dashboard)/clientes/loading.tsx` reutilizando `ClientsSkeleton`; verificar igual que 3.1 en `/clientes`
+- [x] 3.3 Crear `src/app/(dashboard)/embarques/loading.tsx` reutilizando `ShipmentsSkeleton`; verificar igual que 3.1 en `/embarques`
+- [x] 3.4 Crear `src/app/(dashboard)/embarques/[id]/loading.tsx` con skeleton del detalle; verificar igual que 3.1 en un detalle válido
+- [x] 3.5 Agregar estado pendiente + toast al logout en `sidebar.tsx` (reemplazar el `void logoutAction()`); verificar que al cerrar sesión el botón muestra estado de progreso, no permite doble clic y aparece toast de confirmación
+- [x] 3.6 Pasada de consistencia: toda operación de escritura (crear/editar/eliminar cliente y embarque, login, logout) tiene estado pendiente + toast de éxito/error, y la edición confirma desde el propio diálogo de formulario sin modal extra; verificar manualmente los 7 flujos y documentar el criterio de edición en el README; commit del grupo como `feat(feedback): ...`
 
 ## 4. Tablas: paginación, filtros y ordenamiento
 
