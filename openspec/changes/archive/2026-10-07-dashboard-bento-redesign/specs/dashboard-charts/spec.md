@@ -2,7 +2,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: El sistema DEBE mostrar un gráfico de dona con la distribución de embarques por estado (Pendiente, En tránsito, Entregado, Retrasado, Cancelado). Los valores DEBEN calcularse desde la base de datos.
+### Requirement: Embarques por estado
 El sistema DEBE mostrar un gráfico de **dona** (PieChart con `innerRadius` > 0, ej. 60px) con la distribución de embarques por estado usando la **paleta de colores semántica**:
 - **Entregado:** lime-500/lime-400 (éxito)
 - **En tránsito:** amber-500 (advertencia/tránsito)
@@ -10,6 +10,14 @@ El sistema DEBE mostrar un gráfico de **dona** (PieChart con `innerRadius` > 0,
 - **Retrasado:** red-500 (error/retraso)
 - **Cancelado:** gray-500 (neutral/desactivado)
 Los valores DEBEN calcularse desde la base de datos. El gráfico DEBE mostrar etiquetas con nombre y valor por segmento (ej. "Entregado: 10"). Las líneas de grilla DEBEN ser extremadamente tenues (punteadas, gris muy claro) o eliminadas.
+
+#### Scenario: Gráfico por estado con datos
+- **WHEN** el usuario navega a `/dashboard` y existen embarques
+- **THEN** el sistema muestra un gráfico de dona con un segmento por estado y su cantidad
+
+#### Scenario: Gráfico por estado sin datos
+- **WHEN** el usuario navega a `/dashboard` y no existen embarques
+- **THEN** el gráfico muestra un estado vacío con un mensaje apropiado
 
 #### Scenario: Donut chart renders with semantic colors and inner radius
 - **WHEN** el usuario navega a `/dashboard` y existen embarques
@@ -20,8 +28,16 @@ Los valores DEBEN calcularse desde la base de datos. El gráfico DEBE mostrar et
 - **WHEN** el usuario navega a `/dashboard` y no existen embarques
 - **THEN** el gráfico muestra un estado vacío con un mensaje apropiado
 
-### Requirement: El sistema DEBE mostrar un gráfico de barras con la cantidad de embarques por modalidad (FCL, LCL, AIR). Los valores DEBEN calcularse desde la base de datos.
+### Requirement: Embarques por modalidad
 El sistema DEBE mostrar un gráfico de barras con **barras más gruesas** (`barSize={40}`) y **bordes redondeados superiores** (`radius={[4, 4, 0, 0]}`) para cada modalidad (FCL, LCL, AIR), usando **colores semánticos distintos** por modalidad (ej. FCL → lime-500, LCL → amber-500, AIR → blue-500). Los valores DEBEN calcularse desde la base de datos. Las líneas de grilla DEBEN ser extremadamente tenues (punteadas, gris muy claro) o eliminadas. Los ejes DEBEN simplificarse (ocultar líneas de eje, usar solo grilla punteada sutil).
+
+#### Scenario: Gráfico por modalidad con datos
+- **WHEN** el usuario navega a `/dashboard` y existen embarques
+- **THEN** el sistema muestra un gráfico de barras con una barra por modalidad
+
+#### Scenario: Gráfico por modalidad sin datos
+- **WHEN** el usuario navega a `/dashboard` y no existen embarques
+- **THEN** el gráfico muestra un estado vacío con un mensaje apropiado
 
 #### Scenario: Bar chart renders with thick rounded bars and semantic colors
 - **WHEN** el usuario navega a `/dashboard` y existen embarques
@@ -32,8 +48,16 @@ El sistema DEBE mostrar un gráfico de barras con **barras más gruesas** (`barS
 - **WHEN** el usuario navega a `/dashboard` y no existen embarques
 - **THEN** el gráfico muestra un estado vacío con un mensaje apropiado
 
-### Requirement: El sistema DEBE mostrar un gráfico de área con el volumen de embarques creados por mes. Los valores DEBEN calcularse desde la base de datos.
+### Requirement: Embarques en el tiempo
 El sistema DEBE mostrar un gráfico de área con **relleno de gradiente lineal** (`<defs><linearGradient>`) usando el color de acento primario (lime-500) a opacidad ~0.3 en la parte superior desvaneciéndose a transparente en la base. La línea DEBE usar `type="monotone"` para curvas suaves. Los valores DEBEN calcularse desde la base de datos. Las líneas de grilla DEBEN ser extremadamente tenues (punteadas, gris muy claro) o eliminadas. Los ejes DEBEN simplificarse.
+
+#### Scenario: Gráfico temporal con datos
+- **WHEN** el usuario navega a `/dashboard` y existen embarques
+- **THEN** el sistema muestra un gráfico de área con un punto por mes
+
+#### Scenario: Gráfico temporal sin datos
+- **WHEN** el usuario navega a `/dashboard` y no existen embarques
+- **THEN** el gráfico muestra un estado vacío con un mensaje apropiado
 
 #### Scenario: Area chart renders with gradient fill and monotone smoothing
 - **WHEN** el usuario navega a `/dashboard` y existen embarques
@@ -45,18 +69,30 @@ El sistema DEBE mostrar un gráfico de área con **relleno de gradiente lineal**
 - **WHEN** el usuario navega a `/dashboard` y no existen embarques
 - **THEN** el gráfico muestra un estado vacío con un mensaje apropiado
 
-### Requirement: Los datos para los gráficos DEBEN obtenerse en un Server Component para garantizar SSR.
+### Requirement: Datos de gráficos obtenidos en servidor
 Los datos para los gráficos DEBEN obtenerse en un Server Component para garantizar SSR. (Sin cambios en el comportamiento de obtención de datos).
+
+#### Scenario: Datos de gráficos en servidor
+- **WHEN** se carga la página `/dashboard`
+- **THEN** los datos de los gráficos se obtienen desde el servidor antes del renderizado
 
 #### Scenario: Chart data fetched server-side
 - **WHEN** se carga la página `/dashboard`
 - **THEN** los datos de los gráficos se obtienen desde el servidor antes del renderizado
 
-### Requirement: Los gráficos DEBEN adaptarse al viewport: apilados en mobile y en grid en desktop.
+### Requirement: Responsive de gráficos
 Los gráficos DEBEN adaptarse al viewport siguiendo la arquitectura **Bento Box**:
 - **Mobile (< 768px):** Layout de una sola columna (`grid-cols-1`), gráficos con altura ~250px, Sidebar oculto (Drawer/Sheet via botón hamburguesa).
 - **Tablet (768px–1023px):** Layout de 2 columnas (`grid-cols-2`), KPIs en `col-span-1`, gráfico de área a ancho completo (`col-span-2`), dona/barras apilados.
 - **Desktop (≥ 1024px):** Grid de 3 columnas (`grid-cols-3`) según distribución Bento: columnas 1-2 para KPIs + timeline, columna 3 para dona + barras apiladas. Altura de gráficos ~280px en desktop.
+
+#### Scenario: Gráficos en mobile
+- **WHEN** el viewport es menor a 768px
+- **THEN** los gráficos se muestran apilados en una columna
+
+#### Scenario: Gráficos en desktop
+- **WHEN** el viewport es mayor o igual a 1024px
+- **THEN** los gráficos se muestran en un grid de dos columnas
 
 #### Scenario: Mobile viewport stacks charts
 - **WHEN** el viewport es menor a 768px
@@ -72,8 +108,16 @@ Los gráficos DEBEN adaptarse al viewport siguiendo la arquitectura **Bento Box*
 - **THEN** los gráficos usan grid de 3 columnas con distribución Bento (KPIs+timeline span 2, dona+barras span 1)
 - **THEN** altura de gráficos ~280px
 
-### Requirement: Los gráficos DEBEN mostrar skeletons durante la carga y un mensaje de error si la consulta falla.
+### Requirement: Estados de carga y error de gráficos
 Los gráficos DEBEN mostrar skeletons durante la carga y un mensaje de error si la consulta falla. (Sin cambios en el comportamiento de carga/error).
+
+#### Scenario: Carga de gráficos
+- **WHEN** se está obteniendo los datos de los gráficos
+- **THEN** se muestran skeletons en lugar de los gráficos
+
+#### Scenario: Error en gráficos
+- **WHEN** la consulta de datos de gráficos falla
+- **THEN** se muestra un mensaje de error con opción de reintentar
 
 #### Scenario: Skeletons during chart loading
 - **WHEN** se está obteniendo los datos de los gráficos

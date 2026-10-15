@@ -2,7 +2,7 @@
 
 ## MODIFIED Requirements
 
-### Requirement: El dashboard DEBE mostrar los gráficos definidos en la capacidad `dashboard-charts` junto a las stat cards existentes. Los gráficos DEBEN obtenerse en el mismo Server Component que las stat cards.
+### Requirement: Dashboard incluye gráficos de datos relevantes
 El dashboard DEBE organizar su contenido en una arquitectura Bento Box modular usando CSS Grid con las siguientes restricciones de layout:
 - **Desktop (lg+):** Grid de 3 columnas (`grid-cols-3`) donde las columnas 1-2 abarcan la fila de KPIs y el gráfico de área (timeline), y la columna 3 apila verticalmente el gráfico de dona (estado) y el gráfico de barras (modalidad).
 - **Tablet (md):** Grid de 2 columnas (`grid-cols-2`) donde los KPIs ocupan una fila, el gráfico de área abarca ambas columnas, y los gráficos de dona/barras se apilan en la segunda columna.
@@ -17,6 +17,10 @@ El dashboard DEBE organizar su contenido en una arquitectura Bento Box modular u
 - **Sidebar:** Fondo blanco, indicadores de estado activo sutiles (línea izquierda o cambio de color), sin fondo gris oscuro.
 - **Header:** Fondo transparente/blanco, buscador centrado/izquierda con `rounded-full`/`rounded-xl`, `bg-gray-100` sin bordes, perfil usuario a la derecha.
 - **Datos en Server Component:** Los gráficos y stat cards DEBEN obtener sus datos en el mismo Server Component para garantizar SSR.
+
+#### Scenario: Dashboard con gráficos y stat cards
+- **WHEN** el usuario navega a `/dashboard`
+- **THEN** el sistema muestra las stat cards existentes y los gráficos de datos relevantes en la misma vista
 
 #### Scenario: Desktop Bento layout renders correctly
 - **WHEN** el usuario navega a `/dashboard` en viewport ≥ 1024px

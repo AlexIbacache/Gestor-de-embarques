@@ -70,7 +70,7 @@
 
 ## 10. Responsive, animaciones y datos de prueba
 
-- [ ] 10.1 Revisar y ajustar el responsive de todas las páginas: sidebar oculta en mobile (Sheet), tablas transformadas a cards en mobile, filtros en Sheet/Drawer en mobile, botones accesibles. Verificar en viewport de 375px, 768px y 1280px.
+- [x] 10.1 Revisar y ajustar el responsive de todas las páginas: sidebar oculta en mobile (Sheet), tablas transformadas a cards en mobile, filtros en Sheet/Drawer en mobile, botones accesibles. Verificar en viewport de 375px, 768px y 1280px.
 - [x] 10.2 Agregar animaciones con Motion: fade-in + slide-up en cards, aparición de filas de tabla, transición de dialogs. Las animaciones deben ser sutiles (opacity 0→1, y 10→0). Verificar que las animaciones son visibles pero no distraen.
 - [x] 10.3 Crear `supabase/seed.sql` con INSERT de 15 clientes y 40 embarques distribuidos entre las tres modalidades y los cinco estados. Documentar en el README cómo ejecutar el seed. Verificar que los datos aparecen correctamente en la aplicación.
 - [x] 10.4 Crear `README.md` con: descripción del proyecto, stack tecnológico, instrucciones de instalación, configuración de Supabase (tablas, RLS, seed), variables de entorno, comando de ejecución, y decisiones de arquitectura. Verificar que un desarrollador puede seguir el README para instalar el proyecto desde cero.
