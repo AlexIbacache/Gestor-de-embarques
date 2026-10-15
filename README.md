@@ -157,16 +157,16 @@ La presencia de una cookie de auth no se usa como señal de "sesión iniciada" a
 
 ### RLS: permisiva en permisos, restrictiva en capacidades
 
-Las políticas son `auth.uid() is not null` para las operaciones que la aplicación ofrece, y **no hay política de borrado sobre `clients`**. Esa asimetría es intencional:
+Las políticas son `auth.uid() is not null` para todas las operaciones que la aplicación ofrece, en ambas tablas:
 
 | Tabla | select | insert | update | delete |
 | --- | --- | --- | --- | --- |
-| `clients` | ✅ | ✅ | ✅ | **❌ sin política** |
+| `clients` | ✅ | ✅ | ✅ | ✅ (`auth.uid() is not null`) |
 | `shipments` | ✅ | ✅ | ✅ | ✅ |
 
-**La ausencia de la política de delete es el control**, no un descuido. El enunciado pide borrar *embarques*; clientes son crear, leer y editar. Un botón deshabilitado es un hecho de UI, no una garantía de seguridad: quien evaluator no respeta el flujo de la interfaz puede llamar al endpoint REST de Supabase directamente con un JWT válido. Sin política de delete, PostgREST responde `42501` a cualquier llamada directa autenticada, así que la base de datos —y no el frontend— es la que cierra la puerta.
+**El borrado de clientes ahora existe porque la app lo expone.** La tabla ofrece un `DeleteClientDialog` conectado a `deleteClientAction`, y la base de datos concede exactamente lo que la app ofrece: condicionar la capacidad a la ausencia de un botón es un control invertido, porque quien no respeta el flujo de la interfaz puede llamar al endpoint REST de Supabase directamente con un JWT válido.
 
-`shipments.client_id` referencia `clients (id)` con `ON DELETE NO ACTION`, así que un borrado en cascada nunca podría eliminar los embarques de un cliente en silencio. Esa constraint es la **segunda** capa: no sustituye a la policy y solo dispara para clientes que ya tienen embarques.
+`shipments.client_id` referencia `clients (id)` con `ON DELETE NO ACTION`, así que borrar un cliente que todavía tiene embarques falla con `23503`, el código que `deleteClientAction` mapea al mensaje "No se puede eliminar el cliente porque tiene embarques asociados". La FK es la guarda que protege los embarques de un cliente, y el delete nunca hace cascada.
 
 Ser permisivo en el resto **es una decisión deliberada de alcance, no una omisión**. No hay multi-tenancy en este proyecto: un gestor de embarques es un usuario operativo, no un inquilino, y agregar una columna `organization_id` más políticas por organization para un producto de un solo cliente sería complejidad sin requisito.
 
@@ -207,7 +207,7 @@ El **mensaje** de Supabase nunca se muestra: está en inglés y puede nombrar in
 
 ### Borrados de cero filas son fallos
 
-`.delete().eq("id", id)` sin selección devuelve `data: null` y ningún error: un borrado que no coincidió con nada es indistinguible de uno exitoso. Por eso las actions agregan `.select("id")` — la respuesta es el array de filas realmente eliminadas— y tratan `length === 0` como error. Devolver `success: true` ahí le diría a la interfaz que se eliminó un embarque que sigue existiendo.
+`.delete().eq("id", id)` sin selección devuelve `data: null` y ningún error: un borrado que no coincidió con nada es indistinguible de uno exitoso. Por eso las actions agregan `.select("id")` — la respuesta es el array de filas realmente eliminadas— y tratan `length === 0` como error. Devolver `success: true` ahí le diría a la interfaz que se eliminó un registro que sigue existiendo. Lo aplican tanto `deleteShipmentAction` sobre `shipments` como `deleteClientAction` sobre `clients`.
 
 ### El estado del listado vive en la URL
 
@@ -228,7 +228,7 @@ Decisiones de seguridad dispersas en las secciones anteriores, con la referencia
 | Decisión | Dónde | Qué evita |
 | --- | --- | --- |
 | Sesión verificada en servidor | Cada Server Action | Que un JWT manipulado alcance una mutación |
-| Sin policy de delete en `clients` | `supabase/schema.sql` | Borrado de clientes fuera del flujo de la UI |
+| Guarda FK en el delete de `clients` | `supabase/schema.sql` (`shipments.client_id`) | Borrar un cliente con embarques (`23503`) en vez de una cascada silenciosa |
 | Allowlists en todo query param | `SORTABLE_COLUMNS`, `SHIPMENT_STATUSES`, `SHIPMENT_MODALITIES` | Inyección de SQL vía `?sort=`, `?status=` |
 | `formatSearchTerm` | `src/lib/utils.ts` | Escapar del valor en el `.or()` de PostgREST |
 | Errores por código, no por mensaje | `src/app/actions/embarques.ts` | Filtrar nombres de constraints y de policies RLS |
@@ -270,7 +270,7 @@ Ordenado por lo que más duele primero. Esto no es una lista de deseos: es el ra
 
 - **`pnpm build` emite un warning de deprecación**: la convención de archivo `middleware` está deprecada en favor de `proxy` en Next 16. Es esperado y no rompe nada; el warning viene del propio `next` al detectar `src/middleware.ts`. Si se migra, `next` incluye el codemod, pero conviene hacerlo en un commit propio porque renombra el archivo.
 - **No** hay flujo de signup. El usuario de Auth se crea desde el Dashboard; sin él, `/login` no tiene contra qué validarse.
-- **No** se puede eliminar un cliente, por dos razones independientes. La política de borrado **no existe** sobre `public.clients`, así que PostgREST responde `42501` a cualquier llamada directa autenticada. Y aunque existiera, `shipments.client_id` usa `ON DELETE NO ACTION`: la FK bloquearía en vez de hacer cascada silenciosa sobre los embarques del cliente. El botón de la tabla está deshabilitado por una tercera razón más —no hay `deleteClientAction`—, pero esa es la que menos importa, porque un control de UI no es una garantía.
+- **Sí** se puede eliminar un cliente. La RLS concede delete sobre `public.clients` igual que sobre `shipments`, la tabla ya no tiene el botón deshabilitado y existe `deleteClientAction`. El único bloqueo es la FK: `shipments.client_id` usa `ON DELETE NO ACTION`, así que un cliente que todavía tiene embarques falla con `23503` —el mensaje de "tiene embarques asociados"— en vez de sufrir una cascada silenciosa sobre sus embarques.
 - **`"Cargando..."` está prohibido por la convención de UI del proyecto**: los estados de carga son skeletons, no texto.
 
 ## Estructura del proyecto
