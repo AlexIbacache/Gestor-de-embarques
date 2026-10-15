@@ -24,6 +24,10 @@ const INVALID_INPUT_ERROR = "Revisá los datos ingresados.";
 const CLIENT_NOT_FOUND_ERROR =
   "El cliente que estás editando ya no existe. Actualizá la página e intentá de nuevo.";
 const MUTATION_FAILED_ERROR = "No pudimos guardar el cliente. Intentá de nuevo.";
+const DELETE_NOT_FOUND_ERROR =
+  "El cliente que intentás eliminar ya no existe. Actualizá la página e intentá de nuevo.";
+const CLIENT_HAS_SHIPMENTS_ERROR =
+  "No se puede eliminar el cliente porque tiene embarques asociados.";
 
 /**
  * Validates the *target* of an update, not the client payload, which is why it
@@ -186,4 +190,55 @@ export async function updateClientAction(
   revalidatePath(CLIENTS_PATH);
 
   return { success: true, data: persisted };
+}
+
+export async function deleteClientAction(input: {
+  id: string;
+}): Promise<ActionResult<{ id: string }>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { success: false, error: UNAUTHORIZED_ERROR };
+
+  const target = clientIdSchema.safeParse(input);
+
+  if (!target.success) {
+    return {
+      success: false,
+      error: INVALID_INPUT_ERROR,
+      fieldErrors: toFieldErrors(target.error),
+    };
+  }
+
+  // `.select("id")` makes "deleted one row" observable: without a selection
+  // PostgREST returns `data: null`, so a delete that matched nothing is
+  // indistinguishable from a successful one.
+  const { data, error } = await supabase
+    .from("clients")
+    .delete()
+    .eq("id", target.data.id)
+    .select("id");
+
+  // `23503` is the `shipments.client_id` FK (ON DELETE NO ACTION): the client
+  // still has shipments, so it cannot be removed. It gets its own delete copy,
+  // not the save-oriented wording in SUPABASE_ERROR_MESSAGES.
+  if (error) {
+    if (error.code === "23503") {
+      return { success: false, error: CLIENT_HAS_SHIPMENTS_ERROR };
+    }
+
+    return { success: false, error: mutationError(error) };
+  }
+
+  const deleted = (data ?? []) as { id: string }[];
+
+  if (deleted.length === 0) {
+    return { success: false, error: DELETE_NOT_FOUND_ERROR };
+  }
+
+  revalidatePath(CLIENTS_PATH);
+
+  return { success: true, data: { id: deleted[0].id } };
 }

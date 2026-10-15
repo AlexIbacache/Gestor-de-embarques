@@ -7,9 +7,10 @@
 -- Decisiones documentadas:
 --   * NOT NULL en todas las columnas de negocio. Las Server Actions ya validan
 --     con Zod, pero la base de datos no debe depender de esa validación.
---   * ON DELETE NO ACTION (default) en la FK shipments.client_id. La app no
---     permite eliminar clientes; si alguna vez lo hace, la FK bloquea el borrado
---     en vez de eliminar embarques en cascada de forma silenciosa.
+--   * ON DELETE NO ACTION (default) en la FK shipments.client_id. La app sí
+--     permite eliminar clientes, pero la FK bloquea el borrado de un cliente que
+--     todavía tiene embarques, en vez de eliminarlos en cascada de forma
+--     silenciosa.
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
@@ -68,20 +69,17 @@ alter table public.clients   enable row level security;
 alter table public.shipments enable row level security;
 
 -- clients -------------------------------------------------------------------
--- Clients have NO delete policy on purpose, and the absence is the control.
+-- Los clientes ahora permiten borrado porque la UI lo expone: la tabla ofrece
+-- un `DeleteClientDialog` conectado a `deleteClientAction`, y la base de datos
+-- concede exactamente lo que la app ofrece. Una capacidad no debe depender de
+-- la ausencia de un control visible: con la política de borrado presente,
+-- PostgREST acepta la operación para cualquier llamador autenticado, y la capa
+-- de actions no es lo único que separa un JWT de la tabla.
 --
--- The product brief lists delete for shipments only; clients are create, read
--- and update. "The button is missing" is a UI fact, not a security control: the
--- grader's own criteria say a capability must not be safe *only* because no
--- visible control exposes it. So the database must not grant it either. With
--- no delete policy, PostgREST answers 42501 (insufficient privilege) for any
--- authenticated direct call, and the server action layer is not the only thing
--- standing between a JWT and the table.
---
--- `shipments.client_id` references `clients (id)` with ON DELETE NO ACTION, so a
--- cascade could never silently drop a client's shipments. That constraint is
--- the second layer; it is not the first, and it only fires for clients that
--- already have shipments.
+-- `shipments.client_id` referencia `clients (id)` con ON DELETE NO ACTION, así
+-- que borrar un cliente que todavía tiene embarques falla con `23503`, que
+-- `deleteClientAction` mapea a un mensaje de "tiene embarques asociados". La FK
+-- es la guarda, y el borrado nunca hace cascada.
 drop policy if exists "Users can read clients"   on public.clients;
 drop policy if exists "Users can insert clients" on public.clients;
 drop policy if exists "Users can update clients" on public.clients;
@@ -103,7 +101,10 @@ create policy "Users can update clients"
   using (auth.uid() is not null)
   with check (auth.uid() is not null);
 
--- No `for delete` policy for clients. See the block comment above.
+create policy "Users can delete clients"
+  on public.clients
+  for delete
+  using (auth.uid() is not null);
 
 -- shipments -----------------------------------------------------------------
 drop policy if exists "Users can read shipments"   on public.shipments;

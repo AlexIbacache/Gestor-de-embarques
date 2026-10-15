@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, Pencil, Trash2 } from "lucide-react";
 
+import { deleteClientAction } from "@/app/actions/clientes";
 import { ClientForm } from "@/components/clientes/client-form";
+import { DeleteClientDialog } from "@/components/clientes/delete-client-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -90,15 +92,33 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
   // re-runs the query on navigation, and a local sort would need the whole list
   // in the browser to work at all.
   const searchParams = useSearchParams();
+  const router = useRouter();
   const activeSort = searchParams.get("sort");
   const activeOrder = searchParams.get("order");
 
   const [editingClient, setEditingClient] = useState<Client | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [deletingClient, setDeletingClient] = useState<Client | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   function handleEdit(client: Client) {
     setEditingClient(client);
     setIsFormOpen(true);
+  }
+
+  function handleDeleteRequest(client: Client) {
+    setDeletingClient(client);
+    setIsDeleteDialogOpen(true);
+  }
+
+  async function handleConfirmDelete(id: string) {
+    const result = await deleteClientAction({ id });
+
+    // The action revalidates "/clientes", but that only affects a future
+    // navigation; the current page still has the deleted row in its props.
+    if (result.success) router.refresh();
+
+    return result;
   }
 
   function handleFormOpenChange(nextOpen: boolean) {
@@ -186,6 +206,7 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
                       <RowActions
                         client={client}
                         onEdit={handleEdit}
+                        onDelete={handleDeleteRequest}
                       />
                     </TableCell>
                   </FadeInTableRow>
@@ -230,7 +251,11 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
                 </time>
               </div>
               <div className="flex justify-end gap-1">
-                <RowActions client={client} onEdit={handleEdit} />
+                <RowActions
+                  client={client}
+                  onEdit={handleEdit}
+                  onDelete={handleDeleteRequest}
+                />
               </div>
             </CardContent>
             </Card>
@@ -245,6 +270,14 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
         open={isFormOpen}
         onOpenChange={handleFormOpenChange}
       />
+
+      <DeleteClientDialog
+        clientId={deletingClient?.id ?? ""}
+        clientName={deletingClient?.name ?? ""}
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
@@ -252,9 +285,11 @@ export function ClientTable({ clients, totalCount }: ClientTableProps) {
 function RowActions({
   client,
   onEdit,
+  onDelete,
 }: {
   client: Client;
   onEdit: (client: Client) => void;
+  onDelete: (client: Client) => void;
 }) {
   return (
     <div className="flex items-center justify-end gap-1">
@@ -266,18 +301,13 @@ function RowActions({
       >
         <Pencil />
       </Button>
-      {/*
-        Delete placeholder. There is no `deleteClientAction` yet, so this is a
-        genuinely disabled control rather than a button that silently does
-        nothing: shipping a live-looking destructive action that no-ops is worse
-        than shipping none. The icon and slot are in place so the column does
-        not shift when the action lands.
-      */}
+      {/* Wired to the confirmation dialog via `onDelete`; the dialog owns the
+          destructive action call and close behavior. */}
       <Button
         variant="ghost"
         size="icon-sm"
         aria-label={`Eliminar ${client.name}`}
-        disabled
+        onClick={() => onDelete(client)}
       >
         <Trash2 />
       </Button>
