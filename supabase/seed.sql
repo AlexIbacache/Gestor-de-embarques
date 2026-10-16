@@ -143,11 +143,64 @@ join public.clients c on c.email = s.client_email;
 
 
 -- -----------------------------------------------------------------------------
+-- Hitos de cada embarque
+-- -----------------------------------------------------------------------------
+-- Los 5 hitos de cada embarque ya existen (los crea el trigger
+-- `shipments_seed_milestones` al insertar). Aquí solo se les ponen fechas
+-- coherentes con el estado, siempre relativas a la ETA:
+--
+--   hito              marítimo (FCL/LCL)   aéreo (AIR)
+--   1 Reserva              eta - 30           eta - 5
+--   2 Ingreso a puerto     eta - 23           eta - 2
+--   3 Zarpe                eta - 20           eta - 1
+--   4 Arribo               eta                eta
+--   5 Entrega              eta + 3            eta + 1
+--
+-- Qué hitos figuran como completados (fecha real = la prevista, sin pasar de hoy):
+--   Entregado    -> los 5
+--   En tránsito  -> 1 a 3 (ya zarpó, falta el arribo)
+--   Retrasado    -> 1 a 3 (zarpó y el arribo venció sin registrarse)
+--   Pendiente    -> solo la Reserva, y solo si su fecha ya pasó
+--   Cancelado    -> ninguno
+--
+-- Efecto buscado: los "Pendiente" con Ingreso a puerto vencido y los "Retrasado"
+-- alimentan el panel `get_attention_items()` con datos reales.
+-- -----------------------------------------------------------------------------
+with plan as (
+  select m.id,
+         m.step,
+         s.status,
+         s.eta + case
+           when s.modality = 'AIR' then (array[-5, -2, -1, 0, 1])[m.step]
+           else                         (array[-30, -23, -20, 0, 3])[m.step]
+         end as planned
+  from public.shipment_milestones m
+  join public.shipments s on s.id = m.shipment_id
+  where s.reference like 'EMB-%'
+)
+update public.shipment_milestones m
+   set planned_date = p.planned,
+       actual_date  = case
+         when p.status = 'Entregado'                             then least(p.planned, current_date)
+         when p.status in ('En tránsito', 'Retrasado') and p.step <= 3
+                                                                 then least(p.planned, current_date)
+         when p.status = 'Pendiente' and p.step = 1 and p.planned <= current_date
+                                                                 then p.planned
+       end
+  from plan p
+ where p.id = m.id;
+
+
+-- -----------------------------------------------------------------------------
 -- Verificación
 -- -----------------------------------------------------------------------------
 select 'clients' as tabla, count(*) as filas from public.clients
 union all
 select 'shipments', count(*) from public.shipments
+union all
+select 'shipment_milestones', count(*) from public.shipment_milestones
+union all
+select 'shipment_events', count(*) from public.shipment_events
 order by tabla;
 
 -- Debe devolver 5 filas, una por estado del enum de la app.

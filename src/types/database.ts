@@ -6,6 +6,8 @@
  * this file, which keeps the dependency one-way and avoids an import cycle.
  */
 import type {
+  ShipmentEventKind,
+  ShipmentMilestoneName,
   ShipmentModality,
   ShipmentStatus,
 } from "@/lib/domain/shipments";
@@ -31,6 +33,8 @@ export type Shipment = {
   status: ShipmentStatus;
   /** ISO 8601 calendar date (`yyyy-mm-dd`). */
   eta: string;
+  /** Free text, up to 1000 characters; null when the shipment has no notes. */
+  notes: string | null;
   /** ISO 8601 timestamp (Postgres `timestamptz`). */
   created_at: string;
 };
@@ -65,4 +69,55 @@ export type DashboardStats = {
   by_status: Record<string, number>;
   by_modality: Record<string, number>;
   monthly: DashboardMonthlyBucket[];
+};
+
+/**
+ * One of the five fixed milestones of a shipment (`shipment_milestones`).
+ * A milestone is completed when `actual_date` is not null.
+ */
+export type ShipmentMilestone = {
+  id: string;
+  shipment_id: string;
+  name: ShipmentMilestoneName;
+  /** 1-based position in `SHIPMENT_MILESTONES`. */
+  step: number;
+  /** ISO 8601 calendar date (`yyyy-mm-dd`). */
+  planned_date: string | null;
+  /** ISO 8601 calendar date (`yyyy-mm-dd`). */
+  actual_date: string | null;
+  created_at: string;
+};
+
+/** Append-only history row (`shipment_events`), written only by DB triggers. */
+export type ShipmentEvent = {
+  id: string;
+  shipment_id: string;
+  kind: ShipmentEventKind;
+  message: string;
+  /** Null when the change was made from the SQL editor (migrations, seed). */
+  actor_email: string | null;
+  created_at: string;
+};
+
+/**
+ * Shape of the detail query:
+ * `.select("*, client:clients(*), milestones:shipment_milestones(*), events:shipment_events(*)")`.
+ * Sort `milestones` by `step` and `events` by `created_at desc` when rendering.
+ */
+export type ShipmentDetailData = ShipmentWithClient & {
+  milestones: ShipmentMilestone[];
+  events: ShipmentEvent[];
+};
+
+/** One element of the array returned by the `get_attention_items()` RPC. */
+export type AttentionItem = {
+  shipment_id: string;
+  reference: string;
+  company: string;
+  kind: "retraso" | "hito_vencido";
+  /** Set only when `kind` is `hito_vencido`. */
+  milestone: ShipmentMilestoneName | null;
+  /** Days overdue (ETA or planned date already past). */
+  days: number;
+  priority: number;
 };
