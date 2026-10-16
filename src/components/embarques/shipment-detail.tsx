@@ -7,10 +7,13 @@ import {
   Container,
   Mail,
   MapPin,
+  StickyNote,
   User,
   type LucideIcon,
 } from "lucide-react";
 
+import { ShipmentHistory } from "@/components/embarques/shipment-history";
+import { ShipmentMilestones } from "@/components/embarques/shipment-milestones";
 import { ShipmentStatusBadge } from "@/components/embarques/shipment-status-badge";
 import {
   Card,
@@ -19,7 +22,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatDate, formatDateTime } from "@/lib/utils";
-import type { ShipmentWithClient } from "@/types/database";
+import type { ShipmentDetailData } from "@/types/database";
 
 /** Stand-in for the client block when the joined row is not visible. */
 const CLIENT_UNAVAILABLE = "Cliente no disponible";
@@ -35,7 +38,7 @@ const CLIENT_UNAVAILABLE = "Cliente no disponible";
 export function ShipmentDetail({
   shipment,
 }: {
-  shipment: ShipmentWithClient;
+  shipment: ShipmentDetailData;
 }) {
   const { client } = shipment;
 
@@ -66,6 +69,12 @@ export function ShipmentDetail({
           />
         </CardContent>
       </Card>
+
+      <ShipmentMilestones
+        shipmentId={shipment.id}
+        milestones={shipment.milestones}
+        status={shipment.status}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card>
@@ -132,6 +141,28 @@ export function ShipmentDetail({
             </dl>
           </CardContent>
         </Card>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardHeading icon={StickyNote}>Notas</CardHeading>
+          </CardHeader>
+          <CardContent>
+            {shipment.notes ? (
+              // `whitespace-pre-wrap` keeps the line breaks the user typed.
+              <p className="text-sm break-words whitespace-pre-wrap">
+                {shipment.notes}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Este embarque no tiene notas.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <ShipmentHistory events={shipment.events} />
       </div>
     </div>
   );

@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -168,6 +169,7 @@ function ShipmentFormBody({
   );
   const [status, setStatus] = useState<string | null>(shipment?.status ?? null);
   const [eta, setEta] = useState(shipment ? toDateInputValue(shipment.eta) : "");
+  const [notes, setNotes] = useState(shipment?.notes ?? "");
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [isPending, startTransition] = useTransition();
 
@@ -204,6 +206,7 @@ function ShipmentFormBody({
     setModality(null);
     setStatus(null);
     setEta("");
+    setNotes("");
     setFieldErrors({});
   }
 
@@ -227,6 +230,7 @@ function ShipmentFormBody({
       modality,
       status,
       eta,
+      notes,
     });
 
     if (!parsed.success) {
@@ -523,6 +527,33 @@ function ShipmentFormBody({
               className="text-sm text-destructive"
             >
               {errorMessage("eta")}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid gap-2">
+          <Label htmlFor="shipment-notes">
+            Notas <span className="font-normal text-muted-foreground">(opcional)</span>
+          </Label>
+          <Textarea
+            id="shipment-notes"
+            name="notes"
+            rows={3}
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            disabled={isPending}
+            aria-invalid={errorMessage("notes") ? true : undefined}
+            aria-describedby={
+              errorMessage("notes") ? "shipment-notes-error" : undefined
+            }
+          />
+          {errorMessage("notes") ? (
+            <p
+              id="shipment-notes-error"
+              role="alert"
+              className="text-sm text-destructive"
+            >
+              {errorMessage("notes")}
             </p>
           ) : null}
         </div>

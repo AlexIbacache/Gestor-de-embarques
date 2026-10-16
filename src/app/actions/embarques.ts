@@ -6,12 +6,15 @@ import { z } from "zod";
 
 import type { ActionResult } from "@/app/actions/auth";
 import { createClient } from "@/lib/supabase/server";
+import { statusAfterMilestoneChange } from "@/lib/domain/shipments";
 import {
+  milestoneUpdateSchema,
   shipmentIdSchema,
   shipmentSchema,
+  type MilestoneUpdateInput,
   type ShipmentInput,
 } from "@/lib/validations/shipment";
-import type { Shipment } from "@/types/database";
+import type { Shipment, ShipmentMilestone } from "@/types/database";
 
 /**
  * Re-exported so the client form types its action results without reaching into
@@ -116,8 +119,16 @@ export async function createShipmentAction(
     };
   }
 
-  const { reference, client_id, origin, destination, modality, status, eta } =
-    result.data;
+  const {
+    reference,
+    client_id,
+    origin,
+    destination,
+    modality,
+    status,
+    eta,
+    notes,
+  } = result.data;
 
   // Only the writable business columns are sent. `id` and `created_at` are
   // database defaults and are never accepted from the caller. `.select()` asks
@@ -133,7 +144,16 @@ export async function createShipmentAction(
   // decision D19).
   const response = await supabase
     .from("shipments")
-    .insert({ reference, client_id, origin, destination, modality, status, eta })
+    .insert({
+      reference,
+      client_id,
+      origin,
+      destination,
+      modality,
+      status,
+      eta,
+      notes: notes || null,
+    })
     .select()
     .single<Shipment>();
 
@@ -173,14 +193,31 @@ export async function updateShipmentAction(
     };
   }
 
-  const { reference, client_id, origin, destination, modality, status, eta } =
-    body.data;
+  const {
+    reference,
+    client_id,
+    origin,
+    destination,
+    modality,
+    status,
+    eta,
+    notes,
+  } = body.data;
 
   // `created_at` is deliberately not in the update payload: it is the creation
   // timestamp and must survive an edit unchanged.
   const response = await supabase
     .from("shipments")
-    .update({ reference, client_id, origin, destination, modality, status, eta })
+    .update({
+      reference,
+      client_id,
+      origin,
+      destination,
+      modality,
+      status,
+      eta,
+      notes: notes || null,
+    })
     .eq("id", target.data.id)
     .select()
     .single<Shipment>();
@@ -200,6 +237,115 @@ export async function updateShipmentAction(
   }
 
   revalidatePath(SHIPMENTS_PATH);
+  revalidatePath(`${SHIPMENTS_PATH}/${target.data.id}`);
+
+  return { success: true, data: response.data };
+}
+
+const MILESTONE_NOT_FOUND_ERROR =
+  "El hito que intentás editar ya no existe. Actualizá la página e intentá de nuevo.";
+const MILESTONE_FAILED_ERROR = "No pudimos guardar el hito. Intentá de nuevo.";
+const MILESTONE_STATUS_FAILED_ERROR =
+  "El hito se guardó, pero no pudimos actualizar el estado del embarque. Actualizá la página y revisalo.";
+
+/**
+ * Saves the planned and actual dates of one milestone.
+ *
+ * A milestone is completed when `actual_date` is set. Completing or reopening
+ * Zarpe / Entrega also moves the shipment status (see
+ * `statusAfterMilestoneChange`), so the badge never contradicts the timeline.
+ * The status write is guarded with `.eq("status", current)`: if someone changed
+ * the status in between, nothing is overwritten.
+ *
+ * The history entry ("Hito «Zarpe» completado el ...") is written by the
+ * `shipment_milestones_log_changes` trigger, not here.
+ */
+export async function updateMilestoneAction(
+  input: MilestoneUpdateInput,
+): Promise<ActionResult<ShipmentMilestone>> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { success: false, error: UNAUTHORIZED_ERROR };
+
+  const parsed = milestoneUpdateSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      error: INVALID_INPUT_ERROR,
+      fieldErrors: toFieldErrors(parsed.error),
+    };
+  }
+
+  const { shipment_id, name, planned_date, actual_date } = parsed.data;
+
+  const [current, shipment] = await Promise.all([
+    supabase
+      .from("shipment_milestones")
+      .select("actual_date")
+      .eq("shipment_id", shipment_id)
+      .eq("name", name)
+      .maybeSingle<{ actual_date: string | null }>(),
+    supabase
+      .from("shipments")
+      .select("status")
+      .eq("id", shipment_id)
+      .maybeSingle<Pick<Shipment, "status">>(),
+  ]);
+
+  if (current.error || shipment.error) {
+    return { success: false, error: MILESTONE_FAILED_ERROR };
+  }
+  if (!current.data || !shipment.data) {
+    return { success: false, error: MILESTONE_NOT_FOUND_ERROR };
+  }
+
+  const response = await supabase
+    .from("shipment_milestones")
+    .update({ planned_date, actual_date })
+    .eq("shipment_id", shipment_id)
+    .eq("name", name)
+    .select()
+    .single<ShipmentMilestone>();
+
+  if (!response.success) {
+    if (response.error.code === "PGRST116") {
+      return { success: false, error: MILESTONE_NOT_FOUND_ERROR };
+    }
+    return {
+      success: false,
+      error:
+        response.error.code === "23514"
+          ? "Las fechas ingresadas no son válidas."
+          : response.error.code === "42501"
+            ? UNAUTHORIZED_ERROR
+            : MILESTONE_FAILED_ERROR,
+    };
+  }
+
+  const nextStatus = statusAfterMilestoneChange(
+    shipment.data.status,
+    name,
+    current.data.actual_date !== null,
+    actual_date !== null,
+  );
+
+  if (nextStatus) {
+    const { error } = await supabase
+      .from("shipments")
+      .update({ status: nextStatus })
+      .eq("id", shipment_id)
+      .eq("status", shipment.data.status);
+
+    if (error) return { success: false, error: MILESTONE_STATUS_FAILED_ERROR };
+  }
+
+  revalidatePath(SHIPMENTS_PATH);
+  revalidatePath(`${SHIPMENTS_PATH}/${shipment_id}`);
+  revalidatePath("/dashboard");
 
   return { success: true, data: response.data };
 }

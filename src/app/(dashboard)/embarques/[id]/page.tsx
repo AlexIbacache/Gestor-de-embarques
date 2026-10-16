@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
 import { shipmentIdSchema } from "@/lib/validations/shipment";
-import type { ShipmentWithClient } from "@/types/database";
+import type { ShipmentDetailData } from "@/types/database";
 
 // `.env.local` ships with empty Supabase credentials, so `createClient()` throws
 // if this page is ever evaluated at build time. The middleware already guards
@@ -57,9 +57,16 @@ export default async function ShipmentPage({ params }: { params: Params }) {
    */
   const { data, error } = await supabase
     .from("shipments")
-    .select("*, client:clients(id, name, company, email)")
+    .select(
+      "*, client:clients(id, name, company, email), milestones:shipment_milestones(*), events:shipment_events(*)",
+    )
     .eq("id", shipmentId)
-    .maybeSingle<ShipmentWithClient>();
+    // Embedded rows are ordered/limited per relation: history is newest-first
+    // and capped, the milestone timeline follows its fixed step order.
+    .order("step", { referencedTable: "shipment_milestones", ascending: true })
+    .order("created_at", { referencedTable: "shipment_events", ascending: false })
+    .limit(30, { referencedTable: "shipment_events" })
+    .maybeSingle<ShipmentDetailData>();
 
   /**
    * A transport failure and a missing row are different outcomes and are
@@ -85,8 +92,8 @@ export default async function ShipmentPage({ params }: { params: Params }) {
   // No error, no row: the shipment genuinely does not exist (or RLS hid it).
   if (!data) notFound();
 
-  // `.maybeSingle<ShipmentWithClient>()` types the row from the query (design
-  // decision D19), so `data` is already `ShipmentWithClient` after the
+  // `.maybeSingle<ShipmentDetailData>()` types the row from the query (design
+  // decision D19), so `data` is already `ShipmentDetailData` after the
   // `notFound()` guard — no `as` assertion.
   const shipment = data;
 
