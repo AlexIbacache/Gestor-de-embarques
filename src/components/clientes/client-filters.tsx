@@ -192,11 +192,15 @@ export function ClientFilters() {
 
       {/* Native `type="date"` inputs: the value is already `YYYY-MM-DD`, which
           is exactly the URL format, so no parsing is needed on either side. */}
-      <div className="flex items-end gap-3">
-        <div className="space-y-1">
+      {/* The labels sit beside their inputs, not above them: a label over the
+          field made this group taller than the search box and pushed the date
+          inputs out of line with it. Inline, all three controls are one row of
+          equal height. */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div className="flex items-center gap-2">
           <Label
             htmlFor="client-filters-from"
-            className="text-xs font-normal text-muted-foreground"
+            className="text-sm font-normal text-muted-foreground"
           >
             Desde
           </Label>
@@ -209,10 +213,10 @@ export function ClientFilters() {
             className="w-[160px]"
           />
         </div>
-        <div className="space-y-1">
+        <div className="flex items-center gap-2">
           <Label
             htmlFor="client-filters-to"
-            className="text-xs font-normal text-muted-foreground"
+            className="text-sm font-normal text-muted-foreground"
           >
             Hasta
           </Label>

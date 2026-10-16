@@ -1,29 +1,42 @@
+import { Check, ChevronsRight, Circle, TriangleAlert, X, type LucideIcon } from "lucide-react";
+
 import { Badge } from "@/components/ui/badge";
 import type { ShipmentStatus } from "@/lib/domain/shipments";
 
 /**
- * Single source of truth for shipment status colours, per the project UI
- * convention (updated to semantic palette): `Pendiente` slate/neutral,
- * `En tránsito` amber/warning, `Entregado` lime/success, `Retrasado` red/danger,
- * `Cancelado` gray/muted. Exported so the shipments table, the shipment form
- * select and the detail view all render the same colours instead of duplicating
- * class strings per component.
+ * Single source of truth for shipment status colours. They come from the theme
+ * tokens in `globals.css` (`pending`/`warning`, `info`, `success`, `danger`, `neutral`), so the
+ * badges, the dashboard charts and the dark theme all share one palette:
+ * `Pendiente` amber, `En tránsito` ocean blue, `Entregado` green,
+ * `Retrasado` red-orange (the alert colour), `Cancelado` slate grey.
+ * Exported so the table, the form select and the detail view render the same
+ * colours instead of duplicating class strings.
  *
- * `Record<ShipmentStatus, string>` makes the compiler reject the map the moment
- * a sixth status is added to the canonical union in
- * `src/lib/domain/shipments.ts`, which is the point: a new status must pick a
- * colour here or the build breaks.
+ * `Record<ShipmentStatus, ...>` makes the compiler reject the map the moment a
+ * sixth status is added to `src/lib/domain/shipments.ts`: a new status must pick
+ * a colour and a symbol here or the build breaks.
  *
- * The values are full literal class strings (no `cva`, no interpolation), so
- * Tailwind 4's static extractor sees every candidate and emits them. Verified in
- * the production build output.
+ * The values are full literal class strings (no interpolation), so Tailwind 4's
+ * static extractor sees every candidate.
  */
 export const SHIPMENT_STATUS_STYLES: Record<ShipmentStatus, string> = {
-  Pendiente: "bg-slate-100 text-slate-700 dark:bg-slate-500/20 dark:text-slate-300",
-  "En tránsito": "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300",
-  Entregado: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300",
-  Retrasado: "bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-300",
-  Cancelado: "bg-gray-100 text-gray-700 dark:bg-gray-500/20 dark:text-gray-300",
+  Pendiente: "bg-pending/20 text-warning",
+  "En tránsito": "bg-info/12 text-info",
+  Entregado: "bg-success/12 text-success",
+  Retrasado: "bg-danger/12 text-danger",
+  Cancelado: "bg-neutral/12 text-neutral line-through decoration-1",
+};
+
+/**
+ * Each status also has its own symbol, so the state never depends on colour
+ * alone (colour-blind users, greyscale prints).
+ */
+export const SHIPMENT_STATUS_ICONS: Record<ShipmentStatus, LucideIcon> = {
+  Pendiente: Circle,
+  "En tránsito": ChevronsRight,
+  Entregado: Check,
+  Retrasado: TriangleAlert,
+  Cancelado: X,
 };
 
 /**
@@ -37,8 +50,11 @@ export const SHIPMENT_STATUS_STYLES: Record<ShipmentStatus, string> = {
  * same domain the canonical module in `src/lib/domain/shipments.ts` defines.
  */
 export function ShipmentStatusBadge({ status }: { status: ShipmentStatus }) {
+  const Icon = SHIPMENT_STATUS_ICONS[status];
+
   return (
     <Badge variant="secondary" className={SHIPMENT_STATUS_STYLES[status]}>
+      <Icon data-icon="inline-start" aria-hidden="true" />
       {status}
     </Badge>
   );

@@ -87,12 +87,9 @@ function ChartCard({
           className={`
             group
             overflow-hidden
-            rounded-2xl
-            bg-card
-            shadow-sm
-            transition-shadow
+            transition-colors
             duration-200
-            hover:shadow-md
+            hover:border-primary/30
             ${className}
           `}
         >

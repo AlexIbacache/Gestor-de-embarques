@@ -4,17 +4,17 @@ import { Fragment, useState, useTransition } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
+  Container,
   LayoutDashboard,
   LogOut,
-  Package,
   PanelLeftClose,
   PanelLeftOpen,
-  Truck,
-  Users,
+  Warehouse,
 } from "lucide-react";
 import { toast } from "sonner";
 
 import { logoutAction } from "@/app/actions/auth";
+import { BrandLockup } from "@/components/layout/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -31,8 +31,8 @@ import { cn } from "@/lib/utils";
  */
 export const NAV_ITEMS = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/clientes", label: "Clientes", icon: Users },
-  { href: "/embarques", label: "Embarques", icon: Package },
+  { href: "/clientes", label: "Clientes", icon: Warehouse },
+  { href: "/embarques", label: "Embarques", icon: Container },
 ] as const;
 
 /**
@@ -106,24 +106,49 @@ export function Sidebar({
     <aside
       data-collapsed={isCollapsed}
       className={cn(
-        "hidden h-dvh shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200 md:sticky md:top-0 md:flex",
+        "hidden h-dvh shrink-0 flex-col bg-sidebar text-sidebar-foreground transition-[width] duration-200 md:sticky md:top-0 md:flex",
         isCollapsed ? "w-16" : "w-64",
       )}
     >
       <div
         className={cn(
-          "flex h-16 shrink-0 items-center gap-2.5 px-4",
-          isCollapsed && "justify-center px-2",
+          "flex shrink-0 items-center",
+          // Expanded: brand on the left, toggle on the right. Collapsed: the rail
+          // is only 64px wide, so the mark and the toggle stack instead.
+          isCollapsed
+            ? "flex-col gap-2 px-2 py-3"
+            : "h-16 justify-between gap-2 px-4",
         )}
       >
-        <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-          <Truck className="size-4" aria-hidden="true" />
-        </div>
-        {isCollapsed ? null : (
-          <span className="truncate font-heading text-sm font-medium">
-            Gestor de Embarques
-          </span>
-        )}
+        <BrandLockup showName={!isCollapsed} className="min-w-0" />
+
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={handleToggleCollapsed}
+                aria-controls="sidebar-nav"
+                aria-expanded={!isCollapsed}
+                aria-label={
+                  isCollapsed ? "Expandir menú lateral" : "Colapsar menú lateral"
+                }
+                className="shrink-0 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              />
+            }
+          >
+            {isCollapsed ? (
+              <PanelLeftOpen className="size-4" aria-hidden="true" />
+            ) : (
+              <PanelLeftClose className="size-4" aria-hidden="true" />
+            )}
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            {isCollapsed ? "Expandir menú" : "Colapsar menú"}
+          </TooltipContent>
+        </Tooltip>
       </div>
 
       <nav
@@ -146,14 +171,24 @@ export function Sidebar({
               // carries its label, and the tooltip is an extra affordance.
               aria-label={isCollapsed ? item.label : undefined}
               className={cn(
-                "relative flex items-center overflow-hidden rounded-lg text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
-                isCollapsed ? "justify-center px-0 py-2" : "gap-3 px-3 py-2",
+                "relative flex items-center overflow-hidden rounded-lg text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 focus-visible:outline-none",
+                isCollapsed ? "justify-center px-0 py-1.5" : "gap-3 px-2 py-1.5",
                 isActive
-                  ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-primary"
-                  : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               )}
             >
-              <Icon className="size-4 shrink-0" aria-hidden="true" />
+              {/* The icon sits in a chip that lights up for the current page, so
+                  the active item reads at a glance even in the collapsed rail. */}
+              <span
+                className={cn(
+                  "flex size-8 shrink-0 items-center justify-center rounded-md transition-colors",
+                  isActive &&
+                    "bg-sidebar-primary text-sidebar-primary-foreground",
+                )}
+              >
+                <Icon className="size-[18px]" aria-hidden="true" />
+              </span>
               {isCollapsed ? null : (
                 <span className="truncate">{item.label}</span>
               )}
@@ -176,15 +211,18 @@ export function Sidebar({
       </nav>
 
       <div className="shrink-0">
-        <Separator />
+        <Separator className="bg-sidebar-border" />
         <div className={cn("space-y-2 p-3", isCollapsed && "px-2")}>
           {isCollapsed ? null : (
             <div className="min-w-0 px-1">
-              <p className="truncate text-sm font-medium" title={user.name}>
+              <p
+                className="truncate text-sm font-medium text-sidebar-accent-foreground"
+                title={user.name}
+              >
                 {user.name}
               </p>
               <p
-                className="truncate text-xs text-muted-foreground"
+                className="truncate text-xs text-sidebar-foreground/70"
                 title={user.email}
               >
                 {user.email}
@@ -205,6 +243,7 @@ export function Sidebar({
                 : undefined
             }
             className={cn(
+              "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
               isCollapsed
                 ? "w-full justify-center px-0"
                 : "w-full justify-start gap-2",
@@ -212,29 +251,6 @@ export function Sidebar({
           >
             <LogOut className="size-4 shrink-0" aria-hidden="true" />
             {isCollapsed ? null : isPending ? "Cerrando sesión..." : "Cerrar sesión"}
-          </Button>
-
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={handleToggleCollapsed}
-            aria-controls="sidebar-nav"
-            aria-expanded={!isCollapsed}
-            aria-label={
-              isCollapsed ? "Expandir menú lateral" : "Colapsar menú lateral"
-            }
-            className={cn(
-              isCollapsed
-                ? "w-full justify-center px-0"
-                : "w-full justify-start gap-2",
-            )}
-          >
-            {isCollapsed ? (
-              <PanelLeftOpen className="size-4 shrink-0" aria-hidden="true" />
-            ) : (
-              <PanelLeftClose className="size-4 shrink-0" aria-hidden="true" />
-            )}
-            {isCollapsed ? null : "Colapsar menú"}
           </Button>
         </div>
       </div>

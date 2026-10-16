@@ -7,6 +7,7 @@ import { LogOut, Menu } from "lucide-react";
 import { toast } from "sonner";
 
 import { logoutAction } from "@/app/actions/auth";
+import { BrandLockup } from "@/components/layout/brand-mark";
 import { NAV_ITEMS, type SidebarUser } from "@/components/layout/sidebar";
 import { SearchDialog } from "@/components/layout/search-dialog";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -77,9 +78,13 @@ export function MobileNav({ user }: { user: SidebarUser }) {
           <Menu className="size-5" aria-hidden="true" />
         </SheetTrigger>
 
-        <SheetContent side="left" className="w-72 bg-sidebar">
+        <SheetContent
+          side="left"
+          className="w-72 bg-sidebar text-sidebar-foreground"
+        >
           <SheetHeader>
-            <SheetTitle>Menú</SheetTitle>
+            <SheetTitle className="sr-only">Menú</SheetTitle>
+            <BrandLockup />
           </SheetHeader>
 
           <nav
@@ -100,13 +105,21 @@ export function MobileNav({ user }: { user: SidebarUser }) {
                   // open on top of the destination page.
                   onClick={() => setOpen(false)}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
+                    "flex min-h-11 items-center gap-3 rounded-lg px-2 py-1.5 text-sm font-medium transition-colors focus-visible:ring-3 focus-visible:ring-sidebar-ring/50 focus-visible:outline-none",
                     isActive
-                      ? "bg-sidebar-accent font-medium text-sidebar-accent-foreground"
-                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   )}
                 >
-                  <Icon className="size-4 shrink-0" aria-hidden="true" />
+                  <span
+                    className={cn(
+                      "flex size-8 shrink-0 items-center justify-center rounded-md",
+                      isActive &&
+                        "bg-sidebar-primary text-sidebar-primary-foreground",
+                    )}
+                  >
+                    <Icon className="size-[18px]" aria-hidden="true" />
+                  </span>
                   {item.label}
                 </Link>
               );
@@ -114,17 +127,20 @@ export function MobileNav({ user }: { user: SidebarUser }) {
           </nav>
 
           <div className="mt-auto">
-            <Separator />
+            <Separator className="bg-sidebar-border" />
             <div className="space-y-2 p-3">
               {/* The header (and its toggle) is `hidden md:flex`, so the theme
                   switch has to live here too or it is unreachable on mobile. */}
               <div className="flex items-center gap-2">
                 <div className="min-w-0 flex-1 px-1">
-                  <p className="truncate text-sm font-medium" title={user.name}>
+                  <p
+                    className="truncate text-sm font-medium text-sidebar-accent-foreground"
+                    title={user.name}
+                  >
                     {user.name}
                   </p>
                   <p
-                    className="truncate text-xs text-muted-foreground"
+                    className="truncate text-xs text-sidebar-foreground/70"
                     title={user.email}
                   >
                     {user.email}
@@ -139,7 +155,7 @@ export function MobileNav({ user }: { user: SidebarUser }) {
                 variant="ghost"
                 onClick={handleLogout}
                 disabled={isPending}
-                className="w-full justify-start gap-2"
+                className="w-full justify-start gap-2 text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <LogOut className="size-4" aria-hidden="true" />
                 {isPending ? "Cerrando sesión..." : "Cerrar sesión"}

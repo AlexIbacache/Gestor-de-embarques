@@ -1,14 +1,8 @@
 import { redirect } from "next/navigation";
-import { Truck } from "lucide-react";
 
+import { LoginArt } from "@/components/auth/login-art";
 import { LoginForm } from "@/components/auth/login-form";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { BrandLockup } from "@/components/layout/brand-mark";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { safeRedirectPath } from "@/lib/safe-redirect";
@@ -48,21 +42,45 @@ export default async function LoginPage({
   return (
     <TooltipProvider>
       <Toaster />
-      <main className="flex min-h-dvh items-center justify-center bg-muted/30 px-4 py-10">
-        <Card className="w-full max-w-sm">
-          <CardHeader className="items-center text-center">
-            <div className="mb-2 flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Truck className="size-6" aria-hidden="true" />
+      <main className="grid min-h-dvh lg:grid-cols-[1.25fr_1fr]">
+        {/* Brand panel: desktop only. On small screens the form leads and the
+            brand collapses to the lockup above it. */}
+        <section className="relative hidden flex-col justify-between gap-10 overflow-hidden bg-sidebar p-12 text-sidebar-foreground lg:flex">
+          <BrandLockup />
+
+          <div className="flex justify-center">
+            <LoginArt />
+          </div>
+
+          <div className="max-w-md space-y-3">
+            <h2 className="font-heading text-4xl leading-tight font-semibold text-sidebar-accent-foreground">
+              Cada carga, a <span className="text-sidebar-primary">buen rumbo.</span>
+            </h2>
+            <p className="text-sidebar-foreground/80">
+              Clientes, embarques y fechas de llegada en un solo lugar, para
+              que ningún contenedor se pierda de vista.
+            </p>
+          </div>
+        </section>
+
+        <section className="flex items-center justify-center bg-background px-4 py-10">
+          <div className="w-full max-w-sm space-y-8">
+            <div className="rounded-xl bg-sidebar p-4 lg:hidden">
+              <BrandLockup />
             </div>
-            <CardTitle className="text-2xl">Iniciar sesión</CardTitle>
-            <CardDescription>
-              Ingresá a tu cuenta para gestionar clientes y embarques.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
+
+            <div className="space-y-2">
+              <h1 className="font-heading text-3xl font-semibold tracking-tight">
+                Bienvenido de vuelta
+              </h1>
+              <p className="text-muted-foreground">
+                Ingresá a tu cuenta para gestionar clientes y embarques.
+              </p>
+            </div>
+
             <LoginForm next={next} />
-          </CardContent>
-        </Card>
+          </div>
+        </section>
       </main>
     </TooltipProvider>
   );

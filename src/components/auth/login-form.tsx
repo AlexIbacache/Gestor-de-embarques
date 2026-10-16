@@ -86,7 +86,7 @@ function LoginSubmitButton() {
   const { pending } = useFormStatus();
 
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <Button type="submit" size="lg" className="w-full" disabled={pending}>
       {pending ? "Iniciando sesión..." : "Iniciar sesión"}
     </Button>
   );
