@@ -26,7 +26,6 @@ const DEBOUNCE_MS = 350;
  * value, because a duplicated key in the same list makes React reuse the wrong
  * DOM node — and the check mark (`ItemIndicator`) lives in that node.
  */
-const ALL_STATUS_KEY = "all-status";
 const ALL_MODALITY_KEY = "all-modality";
 
 /**
@@ -67,12 +66,12 @@ export function ShipmentFilters() {
   // is the *starting* value, not a live reflection of it, or the server response
   // would overwrite what the user has typed in the meantime.
   const [term, setTerm] = useState(() => searchParams.get("search") ?? "");
-  // `string | null` rather than the `ShipmentStatus` / `ShipmentModality`
-  // unions: `null` is the "all" sentinel (see below) and is also what Base UI
-  // hands `onValueChange` when the choice is cleared.
-  const [status, setStatus] = useState<string | null>(() =>
-    readFilter(searchParams, "status", SHIPMENT_STATUSES),
-  );
+  // The status facet lives in `ShipmentStatusTabs` (links to `?status=`), so it
+  // is read from the URL on every render instead of being copied into state:
+  // a tab click changes the URL without touching this component.
+  const status = readFilter(searchParams, "status", SHIPMENT_STATUSES);
+  // `string | null`: `null` is the "all" sentinel and is also what Base UI hands
+  // `onValueChange` when the choice is cleared.
   const [modality, setModality] = useState<string | null>(() =>
     readFilter(searchParams, "modality", SHIPMENT_MODALITIES),
   );
@@ -175,11 +174,6 @@ export function ShipmentFilters() {
     timeoutRef.current = setTimeout(() => applySearch(value), DEBOUNCE_MS);
   }
 
-  function handleStatusChange(value: string | null) {
-    setStatus(value);
-    applyFilter("status", value);
-  }
-
   function handleModalityChange(value: string | null) {
     setModality(value);
     applyFilter("modality", value);
@@ -189,7 +183,6 @@ export function ShipmentFilters() {
     cancelPendingSearch();
 
     setTerm("");
-    setStatus(null);
     setModality(null);
 
     const next = new URLSearchParams(searchParams.toString());
@@ -214,10 +207,6 @@ export function ShipmentFilters() {
    * not: the enum members are all non-null strings, and `compareItemEquality`
    * short-circuits nulls to `Object.is`, so no real status can ever match it.
    */
-  const statusItems = [
-    { value: null, label: "Todos los estados" },
-    ...SHIPMENT_STATUSES.map((item) => ({ value: item, label: item })),
-  ];
   const modalityItems = [
     { value: null, label: "Todas las modalidades" },
     ...SHIPMENT_MODALITIES.map((item) => ({ value: item, label: item })),
@@ -282,32 +271,6 @@ export function ShipmentFilters() {
         {/* `id` goes on the Root: `SelectTrigger` resolves `idProp ?? rootId`,
             so this is the id of the real focusable `<button role="combobox">`
             and `htmlFor` points at the control itself. */}
-        <Label htmlFor="shipment-filters-status" className="sr-only">
-          Estado
-        </Label>
-        <Select
-          id="shipment-filters-status"
-          items={statusItems}
-          value={status}
-          onValueChange={handleStatusChange}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Todos los estados" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value={null} key={ALL_STATUS_KEY}>
-              Todos los estados
-            </SelectItem>
-            {SHIPMENT_STATUSES.map((item) => (
-              <SelectItem key={item} value={item}>
-                {item}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="md:w-56">
         <Label htmlFor="shipment-filters-modality" className="sr-only">
           Modalidad
         </Label>

@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 
 import { NewShipmentButton } from "@/components/embarques/new-shipment-button";
 import { ShipmentFilters } from "@/components/embarques/shipment-filters";
+import { ShipmentStatusTabs } from "@/components/embarques/shipment-status-tabs";
 import { ShipmentsSkeleton } from "@/components/embarques/shipment-skeleton";
 import { ShipmentTable } from "@/components/embarques/shipment-table";
 import {
@@ -193,12 +194,27 @@ export default async function EmbarquesPage({
    * one `LIMIT 200` round-trip, and it buys a single fetch: doing it inside the
    * boundary instead would mean a second identical query to fill the header.
    */
-  const { data: clientRows, error: clientsError } = await supabase
-    .from("clients")
-    .select("*")
-    .order("company", { ascending: true })
-    .limit(CLIENT_LIMIT)
-    .returns<Client[]>();
+  const [{ data: clientRows, error: clientsError }, statsResult] =
+    await Promise.all([
+      supabase
+        .from("clients")
+        .select("*")
+        .order("company", { ascending: true })
+        .limit(CLIENT_LIMIT)
+        .returns<Client[]>(),
+
+      // Counters for the status tabs. Cosmetic: if the RPC fails the tabs just
+      // render without numbers, they never block the list. Untyped for the same
+      // reason as in the dashboard (no generated `Database` generic).
+      supabase.rpc("get_dashboard_stats"),
+    ]);
+
+  const stats = statsResult.error
+    ? null
+    : (statsResult.data as {
+        total: number;
+        by_status: Record<string, number>;
+      } | null);
 
   // `.returns<Client[]>()` types the response from the query (design decision
   // D19), so `data` is `Client[] | null` and no `as` assertion is needed.
@@ -209,7 +225,12 @@ export default async function EmbarquesPage({
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-2xl font-semibold tracking-tight">Embarques</h1>
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Embarques</h1>
+          <p className="text-sm text-muted-foreground">
+            Consultá, filtrá y seguí cada carga.
+          </p>
+        </div>
         {/* No CTA to offer when the list it depends on failed to load: the form
             would open with no selectable client and a disabled submit. */}
         {clientsError ? null : <NewShipmentButton clients={clients} />}
@@ -218,6 +239,15 @@ export default async function EmbarquesPage({
       {clientsError ? (
         <ShipmentsErrorState code={clientsError.code} what="los clientes" />
       ) : null}
+
+      <ShipmentStatusTabs
+        path={EMBARQUES_PATH}
+        params={paramsToQuery(params)}
+        active={parseStatus(readParam(params.status))}
+        counts={
+          stats ? { total: stats.total, byStatus: stats.by_status } : null
+        }
+      />
 
       <ShipmentFilters />
 
