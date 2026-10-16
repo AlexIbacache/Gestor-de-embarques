@@ -23,12 +23,12 @@ export function DashboardSkeleton() {
 
         {/* KPI cards */}
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {[0, 1, 2].map((index) => (
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[0, 1, 2, 3].map((index) => (
             <Card
               key={index}
               className="
-                rounded-2xl border-0
+                 
                 bg-card shadow-sm
               "
             >
@@ -47,6 +47,25 @@ export function DashboardSkeleton() {
           ))}
         </div>
 
+        {/* Attention panel */}
+
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-40" />
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {[0, 1].map((index) => (
+              <div key={index} className="flex items-center gap-3">
+                <Skeleton className="size-9 shrink-0 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-56" />
+                  <Skeleton className="h-3 w-72 max-w-full" />
+                </div>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
         {/* Charts */}
 
         <div className="grid gap-6 xl:grid-cols-[1.5fr_1fr]">
@@ -54,8 +73,8 @@ export function DashboardSkeleton() {
             <Card
               key={index}
               className="
-                overflow-hidden rounded-2xl
-                border-0 bg-card shadow-sm
+                overflow-hidden 
+                 bg-card shadow-sm
               "
             >
               <CardHeader className="space-y-2">
@@ -74,8 +93,8 @@ export function DashboardSkeleton() {
 
         <Card
           className="
-            overflow-hidden rounded-2xl
-            border-0 bg-card shadow-sm
+            overflow-hidden 
+             bg-card shadow-sm
           "
         >
           <CardHeader className="space-y-2">
@@ -92,8 +111,8 @@ export function DashboardSkeleton() {
 
         <Card
           className="
-            overflow-hidden rounded-2xl
-            border-0 bg-card shadow-sm
+            overflow-hidden 
+             bg-card shadow-sm
           "
         >
           <CardHeader className="space-y-2">

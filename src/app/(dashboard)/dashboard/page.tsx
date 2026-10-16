@@ -2,11 +2,13 @@ import { Suspense } from "react";
 import Link from "next/link";
 import {
   AlertCircle,
+  CheckCircle2,
   Clock,
   Package,
   Truck,
 } from "lucide-react";
 
+import { AttentionPanel } from "@/components/dashboard/attention-panel";
 import { DashboardCharts } from "@/components/dashboard/dashboard-charts";
 import { DashboardSkeleton } from "@/components/dashboard/dashboard-skeleton";
 import { StatCard } from "@/components/dashboard/stat-card";
@@ -32,7 +34,11 @@ import { createClient } from "@/lib/supabase/server";
 import { SHIPMENT_STATUS } from "@/lib/domain/shipments";
 import { formatDateTime } from "@/lib/utils";
 
-import type { DashboardStats, ShipmentWithClient } from "@/types/database";
+import type {
+  AttentionItem,
+  DashboardStats,
+  ShipmentWithClient,
+} from "@/types/database";
 
 /*
  * `.env.local` ships with empty Supabase credentials, so `createClient()`
@@ -95,7 +101,7 @@ async function DashboardContent() {
    * are downloaded to be aggregated in JavaScript (design decision D16): the
    * three charts and the KPIs all read this one payload.
    */
-  const [statsResult, recentResult] = await Promise.all([
+  const [statsResult, recentResult, attentionResult] = await Promise.all([
     // The RPC payload cannot be bound with `.returns<T>()`: `createClient()` is
     // built without the generated `Database` generic, so supabase-js types an
     // RPC result as `any`, and `any` distributes over `.returns`' conditional so
@@ -111,6 +117,11 @@ async function DashboardContent() {
       .order("created_at", { ascending: false })
       .limit(RECENT_SHIPMENT_LIMIT)
       .returns<ShipmentWithClient[]>(),
+
+    // Same RPC typing caveat as above. Not part of `firstError` on purpose: the
+    // attention panel is secondary, so a failure here (for example the
+    // milestones migration not applied yet) must not hide the KPIs and charts.
+    supabase.rpc("get_attention_items"),
   ]);
 
   const firstError = statsResult.error ?? recentResult.error ?? null;
@@ -131,11 +142,17 @@ async function DashboardContent() {
 
   const shipments = recentResult.data ?? [];
 
+  // `null` tells the panel the RPC failed, which is different from "no items".
+  const attentionItems = attentionResult.error
+    ? null
+    : ((attentionResult.data as AttentionItem[] | null) ?? []);
+
   // The RPC supplies every counter; the KPIs read it instead of issuing extra
   // `head: true` count queries.
   const total = stats.total;
   const inTransit = stats.by_status[SHIPMENT_STATUS.IN_TRANSIT] ?? 0;
   const delayed = stats.by_status[SHIPMENT_STATUS.DELAYED] ?? 0;
+  const delivered = stats.by_status[SHIPMENT_STATUS.DELIVERED] ?? 0;
 
   /* =========================================================
      DASHBOARD
@@ -163,12 +180,14 @@ async function DashboardContent() {
             KPI CARDS
             ===================================================== */}
 
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Embarques totales"
             value={total}
             icon={Package}
             iconColor="primary"
+            href="/embarques"
+            hint="Ver todos los embarques"
           />
 
           <StatCard
@@ -176,6 +195,17 @@ async function DashboardContent() {
             value={inTransit}
             icon={Truck}
             iconColor="info"
+            href={`/embarques?status=${encodeURIComponent(SHIPMENT_STATUS.IN_TRANSIT)}`}
+            hint="Cargas en camino"
+          />
+
+          <StatCard
+            label="Entregados"
+            value={delivered}
+            icon={CheckCircle2}
+            iconColor="success"
+            href={`/embarques?status=${encodeURIComponent(SHIPMENT_STATUS.DELIVERED)}`}
+            hint="Cargas ya recibidas"
           />
 
           <StatCard
@@ -183,8 +213,17 @@ async function DashboardContent() {
             value={delayed}
             icon={Clock}
             iconColor="danger"
+            valueTone="danger"
+            href={`/embarques?status=${encodeURIComponent(SHIPMENT_STATUS.DELAYED)}`}
+            hint="Requieren seguimiento"
           />
         </div>
+
+        {/* =====================================================
+            ATTENTION
+            ===================================================== */}
+
+        <AttentionPanel items={attentionItems} />
 
         {/* =====================================================
             CHARTS
@@ -206,7 +245,7 @@ async function DashboardContent() {
             RECENT SHIPMENTS
             ===================================================== */}
 
-        <Card className="overflow-hidden rounded-2xl border-0 bg-card shadow-sm">
+        <Card className="overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between gap-4">
             <div>
               <CardTitle className="text-base font-semibold">
@@ -343,7 +382,7 @@ function NoShipmentsYet() {
     <div
       className="
         flex flex-col items-center gap-3
-        rounded-2xl border border-dashed
+         border border-dashed
         border-border bg-muted/20
         py-12 text-center
       "
